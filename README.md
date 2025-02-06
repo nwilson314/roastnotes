@@ -23,8 +23,16 @@
 - **flexible integration**: roasts remain personal, but groups create a vibrant collage of shared coffee moments.
 
 ### 3️⃣ aggregated charm
-- enjoy aggregated roast ratings with an untappd-style flair.
+- enjoy aggregated roast ratings with an untappd-style flair. maybe get some letterboxd vibes too.
 - filter roasts by group for that curated espresso bar feel among your crew.
+
+---
+
+### mvp frontend (latest sveltekit)
+- **landing page**: when a user isn’t logged in, a top section provides a brief overview along with a “login?” button. includes a placeholder box where an image might eventually go.
+- **common header**: a fixed, minimalist header displaying either the user’s profile pic or a “login?” button if not authenticated.
+- **roasts view**: once logged in, users are redirected here. it shows trending roasts (most recent) if not in a group, or a tabbed interface (group vs trending) when in a group.
+- **profile page**: a barebones page showcasing basic user info.
 
 ---
 
@@ -53,15 +61,6 @@
 - **groupmember**: the link table that binds users and groups—keeping every shared cup in sync.
 - **roasts**: individual roast entries, as personal as your favorite corner in a trattoria.
 - **ratings**: method-specific evaluations that capture the essence of each brew.
-
----
-
-## 🔹 frontend & ui
-
-- built with **sveltekit** for a clean, vibrant, and intuitive web experience.
-  - smooth roast submission and rating forms
-  - dynamic dashboards to explore and compare coffee moments
-- deployed on **vercel**, serving your coffee experiences worldwide.
 
 ---
 
@@ -104,11 +103,10 @@
 
 ## 🔹 next steps
 
-1. refine backend models & endpoints using sqlmodel and alembic.
-2. set up the local dev environment (docker-compose for postgres).
+1. user auth 
+2. implement group filtering (aggregated ratings)
 3. deploy the mvp on fly.io (backend) and vercel (frontend).
 4. iterate on ui/ux with genuine feedback from your coffee crew.
-5. lay the groundwork for user auth and more detailed group filtering.
 
 ---
 
