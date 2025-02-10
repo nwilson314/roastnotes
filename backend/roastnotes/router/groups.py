@@ -43,7 +43,7 @@ def add_group_member(group_id: int, group_member: GroupMember, session: Session 
     return group_member
 
 
-@router.delete("/groups/{group_id}", response_model=RESPONSE_404)
+@router.delete("/{group_id}", response_model=dict[str, bool], responses=RESPONSE_404)
 def delete_group(group_id: int, session: Session = Depends(get_session)) -> None:
     group = session.exec(select(Group).where(Group.id == group_id)).first()
     if not group:

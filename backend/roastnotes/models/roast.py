@@ -1,4 +1,3 @@
-from __future__ import annotations
 from datetime import datetime
 from typing import Optional, TYPE_CHECKING
 
@@ -13,8 +12,8 @@ if TYPE_CHECKING:
 
 class Roast(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    sender_id: int = Field(foreign_key="user.id")
+    user_id: int = Field(foreign_key="user.id")
     bean_details: str
     notes: Optional[str] = None
     ratings: list[Rating] = Relationship(back_populates="roast")
-    sender: Optional["User"] = Relationship(back_populates="roasts")
+    user: Optional["User"] = Relationship(back_populates="roasts")

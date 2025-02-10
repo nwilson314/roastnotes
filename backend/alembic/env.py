@@ -8,9 +8,11 @@ from alembic import context
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
 from sqlmodel import SQLModel
 from roastnotes.core.config import settings
-from roastnotes.models.group import Group, GroupMember
+from roastnotes.models.group import Group
+from roastnotes.models.groupmember import GroupMember
 from roastnotes.models.rating import Rating
 from roastnotes.models.roast import Roast
 from roastnotes.models.user import User

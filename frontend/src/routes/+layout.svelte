@@ -9,10 +9,11 @@
 <script>
 	import '../app.css';
   import Header from '$lib/components/Header.svelte';
+  const data = {}
 </script>
   
 <div class="min-h-screen bg-coffee-cream bg-texture">
-  <Header />
+  <Header {data} />
   
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <slot />

@@ -48,8 +48,8 @@ def update_roast(roast_id: int, roast: RoastUpdate, session: Session = Depends(g
     session.refresh(db_roast)
     return db_roast
 
-@router.delete("/{roast_id}", response_model=RESPONSE_404)
-def delete_roast(roast_id: int, session: Session = Depends(get_session)) -> None:
+@router.delete("/{roast_id}", response_model=dict[str, bool], responses=RESPONSE_404)
+async def delete_roast(roast_id: int, session: Session = Depends(get_session)) -> None:
     roast = session.exec(select(Roast).where(Roast.id == roast_id)).first()
     if not roast:
         raise HTTPException(status_code=404, detail=RESPONSE_404)
