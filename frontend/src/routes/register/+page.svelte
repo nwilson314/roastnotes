@@ -14,7 +14,7 @@
   }
 </script>
 
-<div class="min-h-screen bg-texture py-16 px-4">
+<div class="min-h-screen bg-coffee-cream bg-texture-paper py-16 px-4">
   <div class="max-w-md mx-auto">
     <!-- Header -->
     <div class="text-center mb-12">

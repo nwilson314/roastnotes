@@ -1,11 +1,58 @@
 <script lang="ts">
   import type { PageProps } from './$types';
+  import { invalidateAll } from '$app/navigation';
   import RoastCard from '$lib/components/RoastCard.svelte';
-  import { communityStats } from '$lib/stores/auth';
+  import GroupRoastCard from '$lib/components/GroupRoastCard.svelte';
+  import type { Roast, UserGroup, GroupRoast, GroupRoastCollection, RoastDetails } from '$lib/types';
+  import { RoastsView } from '$lib/types';
+  import AddRoastModal from '$lib/components/AddRoastModal.svelte';
+  // import RoastDetailsModal from '$lib/components/RoastDetailsModal.svelte';
 
   let { data }: PageProps = $props();
-  let selectedView = 'trending';
-  
+  let roasts: Roast[] = data.roasts;
+  let user_groups: UserGroup[] = data.user_groups;
+  let group_roasts: GroupRoast[] = data.group_roasts;
+  let groups = data.groups;
+  const user_logged_in = data.user_logged_in;
+  let selectedView: RoastsView = $state(RoastsView.Trending);
+  let displayedRoasts: (Roast | GroupRoast)[] = $state(roasts);
+  let selectedGroupId: number | null = $state(null);
+  let showAddRoastModal = $state(false);
+  let showRoastDetailsModal = $state(false);
+  let selectedRoast: RoastDetails | null = $state(null);
+
+  $effect(() => {
+    displayedRoasts = selectedView === RoastsView.Trending ? roasts : group_roasts;
+  });
+
+  function showTrendingView() {
+    selectedView = RoastsView.Trending;
+    selectedGroupId = null;
+  }
+
+  function showGroupsView() {
+    selectedView = RoastsView.Groups;
+    selectedGroupId = null;
+  }
+
+  function selectGroup(groupId: number) {
+    selectedGroupId = groupId;
+    displayedRoasts = group_roasts.filter((roast) => roast.id === groupId);
+  }
+
+  function showAllGroups() {
+    selectedGroupId = null;
+    displayedRoasts = group_roasts;
+  }
+
+  function isGroupRoast(roast: Roast | GroupRoast): roast is GroupRoast {
+    return roast && typeof roast === 'object' && 'added_by_username' in roast;
+  }
+
+  function handleRoastClick(roast: Roast | GroupRoast) {
+    // selectedRoast = transformToRoastDetails(roast);
+    showRoastDetailsModal = true;
+  }
 </script>
 
 <div class="min-h-screen bg-coffee-paper/30">
@@ -14,48 +61,43 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
       <div class="flex items-center justify-between">
         <div class="flex items-center space-x-4">
-          {#if data.user}
+          <div class="flex items-center p-1.5 bg-coffee-cream/20 rounded-lg border border-coffee-light/20">
             <button 
-              class="px-4 py-2 rounded-lg bg-coffee-deep text-coffee-cream 
-                     hover:bg-coffee-medium transition-colors duration-200
-                     border border-coffee-gold/20"
+              class="px-4 py-1.5 mx-0.5 rounded-md font-medium transition-all duration-200
+                     {selectedView === RoastsView.Trending ? 
+                       'bg-white text-coffee-deep shadow-warm translate-y-[-1px] active:translate-y-0' : 
+                       'text-coffee-medium hover:text-coffee-deep'}"
+              onclick={showTrendingView}
             >
-              Add New Roast
+              Trending
             </button>
-            <div class="flex items-center p-1 bg-coffee-cream/20 rounded-lg border border-coffee-light/20">
+            {#if user_logged_in}
               <button 
-                class="px-4 py-2 rounded-md font-medium transition-all duration-200
-                       {selectedView === 'trending' ? 
-                         'bg-white text-coffee-deep shadow-warm translate-y-[-1px]' : 
+                class="px-4 py-1.5 mx-0.5 rounded-md font-medium transition-all duration-200
+                       {selectedView === RoastsView.Groups ? 
+                         'bg-white text-coffee-deep shadow-warm translate-y-[-1px] active:translate-y-0' : 
                          'text-coffee-medium hover:text-coffee-deep'}"
-                on:click={() => selectedView = 'trending'}
-              >
-                Trending
-              </button>
-              <button 
-                class="px-4 py-2 rounded-md font-medium transition-all duration-200
-                       {selectedView === 'groups' ? 
-                         'bg-white text-coffee-deep shadow-warm translate-y-[-1px]' : 
-                         'text-coffee-medium hover:text-coffee-deep'}"
-                on:click={() => selectedView = 'groups'}
+                onclick={showGroupsView}
               >
                 Groups
               </button>
-            </div>
-          {:else}
-            <a 
-              href="/register"
-              class="px-4 py-2 rounded-lg bg-coffee-deep text-coffee-cream 
-                     hover:bg-coffee-medium transition-colors duration-200
-                     border border-coffee-gold/20"
-            >
-              Join to Share Your Roasts
-            </a>
-          {/if}
+            {/if}
+          </div>
         </div>
         
         <div class="flex items-center space-x-2">
-          {#if data.user}
+          {#if user_logged_in}
+            <button 
+              class="px-3 py-1.5 bg-coffee-deep text-coffee-cream rounded-lg
+                     hover:bg-coffee-medium transition-colors duration-200
+                     flex items-center gap-1.5 text-sm"
+              onclick={() => showAddRoastModal = true}
+            >
+              <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+              </svg>
+              Add Roast
+            </button>
             <select 
               class="px-3 py-2 rounded-lg border border-coffee-light/20 
                      text-coffee-deep bg-white"
@@ -73,149 +115,104 @@
   <!-- Main Content -->
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="flex gap-8">
+      {#if selectedView === RoastsView.Groups && user_logged_in}
+        <!-- Groups Sidebar -->
+        <div class="w-64 shrink-0">
+          <div class="bg-white rounded-xl border border-coffee-light/20 p-4 shadow-warm">
+            <h3 class="font-garamond text-xl text-coffee-deep mb-4">Your Groups</h3>
+            <div class="space-y-2">
+              <button
+                class="w-full px-3 py-2 text-left rounded-lg transition-colors duration-200
+                       {selectedGroupId === null ? 
+                         'bg-coffee-cream/20 text-coffee-deep' : 
+                         'text-coffee-medium hover:bg-coffee-cream/10'}"
+                onclick={showAllGroups}
+              >
+                All Groups ({user_groups.length})
+              </button>
+              {#each user_groups as group}
+                <button
+                  class="w-full px-3 py-2 text-left rounded-lg transition-colors duration-200
+                         {selectedGroupId === group.id ? 
+                           'bg-coffee-cream/20 text-coffee-deep' : 
+                           'text-coffee-medium hover:bg-coffee-cream/10'}"
+                  onclick={() => selectGroup(group.id)}
+                >
+                  <div class="font-medium">{group.name}</div>
+                  <div class="text-sm text-coffee-medium">
+                    {group.roast_count} roasts · {group.member_count} members
+                  </div>
+                </button>
+              {/each}
+            </div>
+          </div>
+        </div>
+      {/if}
+
       <!-- Roasts Grid -->
       <div class="flex-1">
-        <!-- Section Title -->
-        <h2 class="font-garamond text-2xl text-coffee-deep mb-6">
-          {#if data.user}
-            {selectedView === 'trending' ? 'Trending Roasts' : 'Your Groups\' Roasts'}
-          {:else}
-            Trending Roasts
-          {/if}
-        </h2>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {#if displayedRoasts.length > 0}
-            {#each displayedRoasts as roast}
-              <RoastCard {roast} />
-            {/each}
-          {:else}
-            <div class="col-span-full text-center py-12 text-coffee-medium">
-              {#if data.user}
-                {#if selectedView === 'trending'}
-                  <p>No trending roasts yet. Be the first to share one!</p>
+        <div class="bg-white rounded-xl border border-coffee-light/20 p-6 shadow-warm">
+          <!-- Section Title -->
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="font-garamond text-2xl text-coffee-deep">
+              {#if selectedView === RoastsView.Groups}
+                {#if selectedGroupId}
+                  {groups[selectedGroupId].group_name}
                 {:else}
-                  <p>No roasts in your groups yet. Start sharing or join more groups!</p>
+                  All Group Roasts
                 {/if}
               {:else}
-                <p>No roasts to display. Join our community to see more!</p>
+                Trending Roasts
               {/if}
-            </div>
-          {/if}
-
-          {#if !data.user}
-            <div class="col-span-full mt-8 text-center">
-              <p class="text-coffee-medium mb-4">
-                Join {communityStats.active_roasters} roasters sharing their coffee journey
+            </h2>
+            {#if selectedView === RoastsView.Groups && selectedGroupId}
+              <p class="text-coffee-medium">
+                {data.groups[selectedGroupId].group_description}
               </p>
-              <a 
-                href="/register"
-                class="inline-block px-6 py-3 rounded-lg bg-coffee-deep text-coffee-cream 
-                       hover:bg-coffee-medium transition-colors duration-200
-                       border border-coffee-gold/20 font-medium"
-              >
-                Join the Table
-              </a>
-            </div>
-          {/if}
+            {/if}
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {#if displayedRoasts.length > 0}
+              {#each displayedRoasts as roast (roast.id)}
+                {#if selectedView === RoastsView.Groups && isGroupRoast(roast)}
+                  <GroupRoastCard {roast} on:click={() => handleRoastClick(roast)} />
+                {:else if !isGroupRoast(roast)}
+                  <RoastCard {roast} on:click={() => handleRoastClick(roast)} />
+                {/if}
+              {/each}
+            {:else}
+              <div class="col-span-full text-center py-16 bg-texture-dots bg-coffee-cream/5">
+                {#if selectedView === RoastsView.Trending}
+                  <p class="font-garamond text-xl text-coffee-deep mb-2">No trending roasts yet</p>
+                  <p class="text-coffee-medium">Be the first to share your coffee journey!</p>
+                {:else}
+                  <p class="font-garamond text-xl text-coffee-deep mb-2">No group roasts yet</p>
+                  <p class="text-coffee-medium">Start sharing roasts with your groups!</p>
+                {/if}
+              </div>
+            {/if}
+          </div>
         </div>
-      </div>
-
-      <!-- Sidebar -->
-      <div class="hidden lg:block w-80">
-        {#if data.user}
-          <div class="sticky top-24 bg-white rounded-xl border border-coffee-light/20 p-6 shadow-warm">
-            <h2 class="font-garamond text-2xl text-coffee-deep mb-6">
-              Your Groups
-            </h2>
-            
-            <div class="space-y-4">
-              {#if data.userGroups.length > 0}
-                {#each data.userGroups as group}
-                  <div class="p-4 rounded-lg bg-coffee-cream/10 border border-coffee-light/10
-                              hover:bg-coffee-cream/20 transition-colors duration-200 cursor-pointer">
-                    <div class="flex items-center justify-between mb-2">
-                      <h3 class="font-garamond text-lg text-coffee-deep">
-                        {group.name}
-                      </h3>
-                      {#if group.new_roasts > 0}
-                        <span class="px-2 py-1 text-xs rounded-full bg-coffee-gold/20 text-coffee-deep">
-                          {group.new_roasts} new
-                        </span>
-                      {/if}
-                    </div>
-                    <div class="text-sm text-coffee-medium">
-                      <p>{group.members} members</p>
-                      <p>Last active {group.latest_activity}</p>
-                    </div>
-                  </div>
-                {/each}
-              {:else}
-                <p class="text-coffee-medium text-center py-4">
-                  No groups yet. Create or join one to start sharing!
-                </p>
-              {/if}
-
-              <button 
-                class="w-full mt-4 px-4 py-2 rounded-lg border border-coffee-gold/20
-                       text-coffee-deep hover:bg-coffee-cream/20 
-                       transition-colors duration-200"
-              >
-                Create New Group
-              </button>
-            </div>
-          </div>
-        {:else}
-          <div class="sticky top-24 bg-white rounded-xl border border-coffee-light/20 p-6 shadow-warm">
-            <h2 class="font-garamond text-2xl text-coffee-deep mb-6">
-              Community Highlights
-            </h2>
-            
-            <div class="space-y-6">
-              <div>
-                <h3 class="font-garamond text-lg text-coffee-deep mb-2">Active Community</h3>
-                <div class="grid grid-cols-2 gap-4">
-                  <div class="text-center p-3 bg-coffee-cream/10 rounded-lg">
-                    <p class="text-2xl font-garamond text-coffee-deep">{communityStats.total_roasts}</p>
-                    <p class="text-sm text-coffee-medium">Roasts Shared</p>
-                  </div>
-                  <div class="text-center p-3 bg-coffee-cream/10 rounded-lg">
-                    <p class="text-2xl font-garamond text-coffee-deep">{communityStats.active_roasters}</p>
-                    <p class="text-sm text-coffee-medium">Active Roasters</p>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 class="font-garamond text-lg text-coffee-deep mb-2">Popular Origins</h3>
-                <div class="space-y-2">
-                  {#each communityStats.popular_origins as origin}
-                    <div class="flex justify-between items-center p-2 bg-coffee-cream/10 rounded-lg">
-                      <span class="text-coffee-deep">{origin.name}</span>
-                      <span class="text-coffee-medium text-sm">{origin.roast_count} roasts</span>
-                    </div>
-                  {/each}
-                </div>
-              </div>
-
-              <div>
-                <h3 class="font-garamond text-lg text-coffee-deep mb-2">Recent Activity</h3>
-                <div class="space-y-2">
-                  <p class="text-coffee-medium">
-                    {communityStats.recent_activity.new_roasts_24h} new roasts today
-                  </p>
-                  <p class="text-coffee-medium">
-                    {communityStats.recent_activity.new_reviews_24h} new reviews today
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        {/if}
       </div>
     </div>
   </div>
 </div>
+
+<AddRoastModal
+  bind:show={showAddRoastModal}
+  userGroups={data.user_groups}
+  selectedGroupId={selectedGroupId}
+  onClose={() => showAddRoastModal = false}
+  onRoastAdded={() => {
+    invalidateAll();
+  }}
+  roasters={data.roasters}
+/>
+
+{#if selectedRoast}
+ 
+{/if}
 
 <style>
   /* Add any additional styles here */

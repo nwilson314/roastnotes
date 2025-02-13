@@ -11,11 +11,13 @@ config = context.config
 
 from sqlmodel import SQLModel
 from roastnotes.core.config import settings
+from roastnotes.models.group_roast_collection import GroupRoastCollection
 from roastnotes.models.group import Group
 from roastnotes.models.groupmember import GroupMember
 from roastnotes.models.rating import Rating
-from roastnotes.models.roast import Roast
+from roastnotes.models.roast import Roast, BeanDetails
 from roastnotes.models.user import User
+from roastnotes.models.roaster import Roaster
 
 url = settings.DATABASE_URL
 

@@ -16,12 +16,16 @@ router = FastApiRouter(
 
 
 @router.get("/roast/{roast_id}")
-def list_roast_ratings(roast_id: int, session: Session = Depends(get_session)) -> list[Rating]:
+def list_roast_ratings(
+    roast_id: int, session: Session = Depends(get_session)
+) -> list[Rating]:
     return session.exec(select(Rating).where(Rating.roast_id == roast_id)).all()
 
 
 @router.post("/")
-def create_rating(rating: RatingCreate, session: Session = Depends(get_session)) -> Rating:
+def create_rating(
+    rating: RatingCreate, session: Session = Depends(get_session)
+) -> Rating:
     # TODO: validate rating data?
     session.add(rating)
     session.commit()
@@ -30,11 +34,13 @@ def create_rating(rating: RatingCreate, session: Session = Depends(get_session))
 
 
 @router.patch("/{rating_id}")
-def update_rating(rating_id: int, rating: RatingUpdate, session: Session = Depends(get_session)) -> Rating:
+def update_rating(
+    rating_id: int, rating: RatingUpdate, session: Session = Depends(get_session)
+) -> Rating:
     db_rating = session.exec(select(Rating).where(Rating.id == rating_id)).first()
     if not db_rating:
         raise HTTPException(status_code=404, detail=RESPONSE_404)
-    
+
     update_model(db_rating, rating, session)
     session.add(db_rating)
     session.commit()
@@ -47,7 +53,7 @@ def delete_rating(rating_id: int, session: Session = Depends(get_session)) -> No
     rating = session.exec(select(Rating).where(Rating.id == rating_id)).first()
     if not rating:
         raise HTTPException(status_code=404, detail=RESPONSE_404)
-    
+
     session.delete(rating)
     session.commit()
     return DELETE_OK

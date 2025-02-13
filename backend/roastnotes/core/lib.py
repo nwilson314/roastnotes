@@ -7,6 +7,7 @@ from sqlmodel import SQLModel
 
 _TSQLModel = TypeVar("_TSQLModel", bound=SQLModel)
 
+
 class FastApiRouter(APIRouter):
     """
     This solution solves both 307 Temporary Redirect and 405 Method Not Allowed

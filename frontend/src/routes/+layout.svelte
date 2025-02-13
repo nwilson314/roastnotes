@@ -1,18 +1,12 @@
-<!-- <script lang="ts">
-	import '../app.css';
-	let { children } = $props();
-</script>
-
-{@render children()} -->
-
-
-<script>
-	import '../app.css';
+<script lang="ts">
+  import '../app.css';
   import Header from '$lib/components/Header.svelte';
-  const data = {}
+  import type { LayoutData } from './$types';
+
+  let { data }: { data: LayoutData } = $props();
 </script>
   
-<div class="min-h-screen bg-coffee-cream bg-texture">
+<div class="min-h-screen bg-coffee-cream bg-texture-paper">
   <Header {data} />
   
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -20,9 +14,8 @@
   </main>
 </div>
   
-  <style>
-	
-	:root {
+<style>
+:root {
   --bg-color: #f4ece3;         /* parchment-like background */
   --primary-color: #8a4b28;    /* rich mahogany */
   --secondary-color: #6c4f3d;  /* deep leather brown */
@@ -39,5 +32,4 @@ body {
   margin: 0;
   padding: 0;
 }
-
-  </style>
+</style>

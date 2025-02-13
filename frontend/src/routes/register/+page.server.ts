@@ -1,36 +1,36 @@
-import { error, redirect } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
+import type { AuthResponse } from '$lib/types';
 
 export const actions: Actions = {
-  default: async ({ cookies, request }) => {
+  default: async ({ request, cookies }) => {
     const data = await request.formData();
-    const email = data.get('email')?.toString();
-    const password = data.get('password')?.toString();
-
-    if (!email || !password) {
-      throw error(400, 'Email and password are required');
-    }
+    const username = data.get('username');
+    const email = data.get('email');
+    const password = data.get('password');
 
     const res = await fetch('https://roastnotes.fly.dev/users/register', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username,
+        email,
+        password
+      })
     });
 
     if (!res.ok) {
-      throw error(401, 'Failed to register');
+      return fail(400, { invalid: true });
     }
 
-    const { access_token } = await res.json();
+    const auth_response: AuthResponse = await res.json();
     
-    cookies.set('token', access_token, {
-      path: '/',
-      httpOnly: true,
-      secure: true,
-      sameSite: 'strict',
-      maxAge: 60 * 60 * 24 * 7 // 1 week
-    });
+    // Store both token and user info
+    cookies.set('roastnotes_token', auth_response.token.access_token, { path: '/' });
+    cookies.set('roastnotes_user', JSON.stringify(auth_response.user), { path: '/' });
 
-    throw redirect(303, '/');
+    throw redirect(303, '/roasts');
   }
-};
+} satisfies Actions;
