@@ -1,38 +1,24 @@
-# sv
+# RoastNotes Frontend
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+## Current Todo
 
-## Creating a project
+- Fix header for correct information when logged in vs logged out
+- Fix handling of session expiration and redirect back to login or homepage
+- Fix auth generally. we need to have a centralized auth store and system. 
+- Fix roast card to properly show ratings information
+- Fix roast details page -> show details for selected roast, including any group ratings and user ratings
+- Add ability to rate a roast
+    - Add Roast modal from roast details page
+- Ability to create a new group
+- Group details page -> more of a homepage for the group
+- Ability to add roasters to a group
+- Ability to remove roasters from a group
+- Aggregate roaster data for a group
+- Profile page
+    - Roasts, Groups, and profile data is displayed
+    - Ability to update profile information -> random profile pic generator
 
-If you're seeing this, you've probably already done this step. Congrats!
 
-```bash
-# create a new project in the current directory
-npx sv create
+## Finished
 
-# create a new project in my-app
-npx sv create my-app
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```bash
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+- Pass roasters to Add Roast modal for search

@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { LayoutData } from '../../routes/$types';
+  import { enhance } from '$app/forms';
   
   export let data: LayoutData;
 </script>
@@ -34,6 +35,17 @@
                 </span>
               </div>
             </a>
+            <form 
+              method="POST" 
+              action="/auth/logout"
+              use:enhance
+            >
+              <button type="submit" 
+                class="px-4 py-2 rounded-lg text-coffee-cream hover:bg-coffee-medium/30 
+                       transition-colors duration-200 text-sm font-medium border border-coffee-gold/20">
+                Logout
+              </button>
+            </form>
           </div>
         {:else}
           <div class="flex items-center space-x-4">

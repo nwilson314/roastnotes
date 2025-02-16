@@ -17,9 +17,15 @@ router = FastApiRouter(
 
 @router.get("/roast/{roast_id}")
 def list_roast_ratings(
-    roast_id: int, session: Session = Depends(get_session)
+    roast_id: int,
+    user_id: int | None = None,
+    session: Session = Depends(get_session)
 ) -> list[Rating]:
-    return session.exec(select(Rating).where(Rating.roast_id == roast_id)).all()
+    """Get all ratings for a roast, optionally filtered by user"""
+    query = select(Rating).where(Rating.roast_id == roast_id)
+    if user_id:
+        query = query.where(Rating.user_id == user_id)
+    return session.exec(query.order_by(Rating.created_at.desc())).all()
 
 
 @router.post("/")

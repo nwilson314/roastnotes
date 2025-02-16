@@ -102,7 +102,6 @@ export interface AuthResponse {
 }
 
 export interface RoastDetails {
-  // Base roast data
   id: number;
   name: string;
   origin: string;
@@ -110,23 +109,10 @@ export interface RoastDetails {
   roast_level: RoastLevel;
   bean_details: BeanDetails;
   created_at: string;
-  
-  // Rating stats - could be either global or group-specific
   rating_stats: {
     avg_rating: number;
     total_ratings: number;
     brew_methods: Record<string, { count: number; avg_rating: number }>;
-  };
-  
-  // Optional group-specific data
-  group_context?: {
-    group_id: number;
-    added_by_username: string;
-    user_rating?: {
-      rating: number;
-      brew_method: string;
-      notes?: string;
-    };
   };
 }
 
@@ -135,4 +121,28 @@ export interface UserResponse {
   username: string;
   email: string;
   created_at: string;
+}
+
+export interface Rating {
+  id?: number;
+  roast_id: number;
+  user_id: number;
+  brew_method: string;
+  preferred_method: boolean;
+  ratio: string;           // water to coffee ratio
+  temperature: number;     // water temperature
+  grind: string;          // grind details
+  tasting_notes?: string;
+  overall_score: number;   // out of 100, will be converted to out of 5 for display
+  created_at?: string;
+  group_id?: number;      // optional, only present for group-specific ratings
+}
+
+// Helper function to convert rating score
+export function convertRatingToFiveScale(score: number): number {
+  return Math.round((score / 100) * 5 * 10) / 10; // Round to 1 decimal place
+}
+
+export function convertRatingToHundredScale(score: number): number {
+  return Math.round((score / 5) * 100);
 }

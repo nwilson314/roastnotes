@@ -3,10 +3,10 @@
   import { invalidateAll } from '$app/navigation';
   import RoastCard from '$lib/components/RoastCard.svelte';
   import GroupRoastCard from '$lib/components/GroupRoastCard.svelte';
-  import type { Roast, UserGroup, GroupRoast, GroupRoastCollection, RoastDetails } from '$lib/types';
+  import type { Roast, UserGroup, GroupRoast, RoastDetails } from '$lib/types';
   import { RoastsView } from '$lib/types';
   import AddRoastModal from '$lib/components/AddRoastModal.svelte';
-  // import RoastDetailsModal from '$lib/components/RoastDetailsModal.svelte';
+  import { goto } from '$app/navigation';
 
   let { data }: PageProps = $props();
   let roasts: Roast[] = data.roasts;
@@ -18,8 +18,6 @@
   let displayedRoasts: (Roast | GroupRoast)[] = $state(roasts);
   let selectedGroupId: number | null = $state(null);
   let showAddRoastModal = $state(false);
-  let showRoastDetailsModal = $state(false);
-  let selectedRoast: RoastDetails | null = $state(null);
 
   $effect(() => {
     displayedRoasts = selectedView === RoastsView.Trending ? roasts : group_roasts;
@@ -46,13 +44,22 @@
   }
 
   function isGroupRoast(roast: Roast | GroupRoast): roast is GroupRoast {
-    return roast && typeof roast === 'object' && 'added_by_username' in roast;
+    return 'group_id' in roast && 'added_by_username' in roast;
+  }
+
+  function isRoast(roast: Roast | GroupRoast): roast is Roast {
+    return !('group_id' in roast) || !('added_by_username' in roast);
+  }
+
+  function handleAddRoast() {
+    showAddRoastModal = true;
   }
 
   function handleRoastClick(roast: Roast | GroupRoast) {
-    // selectedRoast = transformToRoastDetails(roast);
-    showRoastDetailsModal = true;
+    const roastId = roast.id;
+    goto(`/roasts/${roastId}`);
   }
+
 </script>
 
 <div class="min-h-screen bg-coffee-paper/30">
@@ -91,7 +98,7 @@
               class="px-3 py-1.5 bg-coffee-deep text-coffee-cream rounded-lg
                      hover:bg-coffee-medium transition-colors duration-200
                      flex items-center gap-1.5 text-sm"
-              onclick={() => showAddRoastModal = true}
+              onclick={handleAddRoast}
             >
               <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
@@ -172,26 +179,19 @@
             {/if}
           </div>
           
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {#if displayedRoasts.length > 0}
-              {#each displayedRoasts as roast (roast.id)}
-                {#if selectedView === RoastsView.Groups && isGroupRoast(roast)}
-                  <GroupRoastCard {roast} on:click={() => handleRoastClick(roast)} />
-                {:else if !isGroupRoast(roast)}
-                  <RoastCard {roast} on:click={() => handleRoastClick(roast)} />
-                {/if}
-              {/each}
-            {:else}
-              <div class="col-span-full text-center py-16 bg-texture-dots bg-coffee-cream/5">
-                {#if selectedView === RoastsView.Trending}
-                  <p class="font-garamond text-xl text-coffee-deep mb-2">No trending roasts yet</p>
-                  <p class="text-coffee-medium">Be the first to share your coffee journey!</p>
-                {:else}
-                  <p class="font-garamond text-xl text-coffee-deep mb-2">No group roasts yet</p>
-                  <p class="text-coffee-medium">Start sharing roasts with your groups!</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {#each displayedRoasts as roast (roast.id)}
+              <div 
+                class="cursor-pointer"
+                onclick={() => handleRoastClick(roast)}
+              >
+                {#if isGroupRoast(roast)}
+                  <GroupRoastCard {roast} />
+                {:else if isRoast(roast)}
+                  <RoastCard {roast} />
                 {/if}
               </div>
-            {/if}
+            {/each}
           </div>
         </div>
       </div>
@@ -202,17 +202,15 @@
 <AddRoastModal
   bind:show={showAddRoastModal}
   userGroups={data.user_groups}
+  roasters={data.roasters}
   selectedGroupId={selectedGroupId}
-  onClose={() => showAddRoastModal = false}
+  onClose={() => {
+    showAddRoastModal = false;
+  }}
   onRoastAdded={() => {
     invalidateAll();
   }}
-  roasters={data.roasters}
 />
-
-{#if selectedRoast}
- 
-{/if}
 
 <style>
   /* Add any additional styles here */

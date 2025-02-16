@@ -27,7 +27,6 @@
   const roastLevels = [
     { value: RoastLevel.light, label: 'Light' },
     { value: RoastLevel.medium, label: 'Medium' },
-    { value: RoastLevel.medium_dark, label: 'Medium-Dark' },
     { value: RoastLevel.dark, label: 'Dark' }
   ];
 
@@ -44,6 +43,7 @@
     selectedGroup = selectedGroupId;
     selectedRoaster = null;
     error = null;
+    show = false;
     onClose();
   }
 

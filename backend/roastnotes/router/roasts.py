@@ -15,7 +15,7 @@ from roastnotes.models.user import User
 from roastnotes.services.rating_manager import RatingManager
 from roastnotes.schemas.response_models import DELETE_OK, RESPONSE_404
 from roastnotes.schemas.rating import RatingCreate
-from roastnotes.schemas.roast import RoastCreate, RoastUpdate
+from roastnotes.schemas.roast import RoastCreate, RoastUpdate, RoastResponse
 from roastnotes.schemas.group_roast import GroupRoastDetail
 
 router = FastApiRouter(
@@ -24,8 +24,8 @@ router = FastApiRouter(
 )
 
 
-@router.get("/")
-def list_roasts(session: Session = Depends(get_session)) -> list[Roast]:
+@router.get("/", response_model=list[RoastResponse])
+def list_roasts(session: Session = Depends(get_session)) -> list[RoastResponse]:
     """
     Get all roasts
     For now this is used as a unauthenticated endpoint to get trending roasts
@@ -36,8 +36,8 @@ def list_roasts(session: Session = Depends(get_session)) -> list[Roast]:
     return session.exec(select(Roast)).all()
 
 
-@router.get("/{roast_id}")
-def get_roast(roast_id: int, session: Session = Depends(get_session)) -> Roast:
+@router.get("/{roast_id}", response_model=RoastResponse)
+def get_roast(roast_id: int, session: Session = Depends(get_session)) -> RoastResponse:
     roast = session.exec(select(Roast).where(Roast.id == roast_id)).first()
     if not roast:
         logger.warning(f"Roast {roast_id} not found")
@@ -206,7 +206,7 @@ def get_group_roast(
     )
 
 
-@router.patch("/{roast_id}")
+@router.patch("/{roast_id}", response_model=RoastResponse)
 def update_roast(
     roast_id: int, roast: RoastUpdate, session: Session = Depends(get_session)
 ) -> Roast:

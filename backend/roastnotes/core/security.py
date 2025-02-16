@@ -10,6 +10,7 @@ from sqlmodel import Session, select
 from roastnotes.core.config import settings
 from roastnotes.core.db import get_session
 from roastnotes.models.user import User
+from roastnotes.schemas.response_models import AuthErrorResponse, AuthErrorSubCode
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
@@ -43,34 +44,80 @@ def get_current_user(
     Gets and validates the current user from the token provided.
     The token's 'sub' claim should contain the user's ID.
     """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-
     try:
-        payload = jwt.decode(
-            token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM]
-        )
+        try:
+            payload = jwt.decode(
+                token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM]
+            )
+        except jwt.ExpiredSignatureError:
+            logger.warning("Token has expired")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=AuthErrorResponse(
+                    detail="Token has expired",
+                    sub_code=AuthErrorSubCode.TOKEN_EXPIRED
+                ).model_dump(),
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        except jwt.PyJWTError as e:
+            logger.warning(f"JWT validation failed: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=AuthErrorResponse(
+                    detail="Could not validate credentials",
+                    sub_code=AuthErrorSubCode.TOKEN_INVALID
+                ).model_dump(),
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
         user_id_str: str | None = payload.get("sub")
         if user_id_str is None:
             logger.warning("Token payload missing 'sub' claim")
-            raise credentials_exception
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=AuthErrorResponse(
+                    detail="Invalid token format",
+                    sub_code=AuthErrorSubCode.TOKEN_INVALID
+                ).model_dump(),
+                headers={"WWW-Authenticate": "Bearer"},
+            )
             
         try:
             user_id = int(user_id_str)
         except ValueError:
             logger.warning(f"Token 'sub' claim is not a valid integer: {user_id_str}")
-            raise credentials_exception
-            
-    except jwt.PyJWTError as e:
-        logger.warning(f"JWT validation failed: {str(e)}")
-        raise credentials_exception
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=AuthErrorResponse(
+                    detail="Invalid token format",
+                    sub_code=AuthErrorSubCode.TOKEN_INVALID
+                ).model_dump(),
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in authentication: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=AuthErrorResponse(
+                detail="Authentication failed",
+                sub_code=AuthErrorSubCode.TOKEN_INVALID
+            ).model_dump(),
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     user = db.exec(select(User).where(User.id == user_id)).first()
     if user is None:
         logger.warning(f"No user found for ID {user_id}")
-        raise credentials_exception
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=AuthErrorResponse(
+                detail="User not found",
+                sub_code=AuthErrorSubCode.USER_NOT_FOUND
+            ).model_dump(),
+            headers={"WWW-Authenticate": "Bearer"},
+        )
         
     return user

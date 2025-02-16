@@ -1,4 +1,5 @@
-from typing import Optional
+from datetime import datetime
+from typing import Optional, Dict
 
 from pydantic import BaseModel
 
@@ -23,6 +24,18 @@ class BeanDetailsUpdate(BaseModel):
     extra: Optional[dict] = None
 
 
+class BeanDetailsResponse(BaseModel):
+    """Schema for bean details in responses"""
+    species: str
+    cultivar: Optional[str] = None
+    processing_method: Optional[str] = None
+    altitude: Optional[int] = None
+    extra: Optional[dict] = None
+
+    class Config:
+        from_attributes = True
+
+
 class RoastCreate(BaseModel):
     """Schema for creating a new roast"""
     roaster_id: int  # Required: must specify which roaster made this coffee
@@ -40,3 +53,18 @@ class RoastUpdate(BaseModel):
     single_origin: Optional[bool] = None
     roast_level: Optional[RoastLevel] = None
     bean_details: Optional[BeanDetailsUpdate] = None
+
+
+class RoastResponse(BaseModel):
+    """Schema for roast responses"""
+    id: int
+    name: str
+    origin: str
+    single_origin: bool
+    roast_level: RoastLevel
+    created_at: datetime
+    cached_rating_stats: Optional[Dict] = None
+    bean_details: Optional[BeanDetailsResponse] = None
+
+    class Config:
+        from_attributes = True

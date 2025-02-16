@@ -1,5 +1,5 @@
 import type { PageServerLoad, Actions } from './$types';
-import { error, fail } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import type { Roast, UserResponse, GroupRoast, UserGroup, UserGroupRoastsResponse, GroupRoastCollection, Roaster } from '$lib/types';
 
 export const load: PageServerLoad = async ({ cookies }) => {
@@ -35,6 +35,10 @@ export const load: PageServerLoad = async ({ cookies }) => {
   });
 
   if (!roastersRes.ok) {
+    if (roastersRes.status === 401) {
+      // Most likely an auth error, redirect through logout page for proper handling
+      throw redirect(303, '/auth/logout');
+    }
     throw error(roastersRes.status, 'Failed to fetch roasters');
   }
 
@@ -60,6 +64,10 @@ export const load: PageServerLoad = async ({ cookies }) => {
     });
 
     if (!groups_res.ok) {
+      if (groups_res.status === 401) {
+        // Most likely an auth error, redirect through logout page for proper handling
+        throw redirect(303, '/auth/logout');
+      }
       throw error(groups_res.status, 'Failed to fetch user groups');
     }
 
@@ -79,6 +87,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
     let user_groups_roasts_response: UserGroupRoastsResponse = await group_roasts_res.json();
     let groups = user_groups_roasts_response.groups;
     group_roasts = Object.values(groups).flatMap(group => group.roasts);
+    console.log(roasts)
   }
 
   return {
@@ -182,5 +191,36 @@ export const actions: Actions = {
         error: { message: 'Failed to submit rating. Please try again.' }
       };
     }
+  },
+  getUserRatings: async ({ request, cookies }) => {
+    const token = cookies.get('roastnotes_token');
+    if (!token) {
+      return fail(401, { message: 'Not authenticated' });
+    }
+
+    const data = await request.formData();
+    const roastId = data.get('roastId');
+    if (!roastId) {
+      return fail(400, { message: 'Roast ID is required' });
+    }
+
+    const user_str = cookies.get('roastnotes_user');
+    if (!user_str) {
+      return fail(401, { message: 'User info not found' });
+    }
+    const user: UserResponse = JSON.parse(user_str);
+
+    const res = await fetch(`https://roastnotes.fly.dev/ratings/roast/${roastId}?user_id=${user.id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!res.ok) {
+      return fail(res.status, { message: 'Failed to fetch user ratings' });
+    }
+
+    const ratings = await res.json();
+    return { success: true, ratings };
   }
 };
