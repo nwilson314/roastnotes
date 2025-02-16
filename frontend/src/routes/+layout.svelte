@@ -1,9 +1,15 @@
 <script lang="ts">
   import '../app.css';
   import Header from '$lib/components/Header.svelte';
+  import { auth } from '$lib/stores/auth';
   import type { LayoutData } from './$types';
 
   let { data }: { data: LayoutData } = $props();
+
+  // Initialize auth store whenever layout data changes
+  $effect(() => {
+    auth.init(data.user, data.token);
+  });
 </script>
   
 <div class="min-h-screen bg-coffee-cream bg-texture-paper">

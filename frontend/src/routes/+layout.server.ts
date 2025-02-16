@@ -2,7 +2,7 @@ import type { LayoutServerLoad } from './$types';
 import type { UserResponse } from '$lib/types';
 
 export const load: LayoutServerLoad = async ({ cookies }) => {
-  const token = cookies.get('roastnotes_token');
+  const token: string | null = cookies.get('roastnotes_token') ?? null;
   const user_logged_in = !!token;
   
   let user: UserResponse | null = null;
@@ -15,6 +15,7 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
 
   return {
     user_logged_in,
-    user
+    user,
+    token
   };
 };

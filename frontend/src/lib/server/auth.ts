@@ -2,7 +2,12 @@ import { redirect } from '@sveltejs/kit';
 import type { Cookies } from '@sveltejs/kit';
 import type { UserResponse } from '$lib/types';
 
-export async function validateSession(cookies: Cookies): Promise<UserResponse> {
+export type ValidSession = {
+  user: UserResponse;
+  token: string;
+};
+
+export async function validateSession(cookies: Cookies): Promise<ValidSession> {
   const token = cookies.get('roastnotes_token');
   if (!token) {
     throw redirect(303, '/auth/logout');
@@ -15,7 +20,7 @@ export async function validateSession(cookies: Cookies): Promise<UserResponse> {
 
   try {
     const user = JSON.parse(user_str);
-    return user;
+    return { user, token };
   } catch (e) {
     // If we can't parse the user data, clear cookies and redirect
     cookies.delete('roastnotes_token', { path: '/' });

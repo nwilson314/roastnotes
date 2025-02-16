@@ -5,8 +5,8 @@
   export let data: PageData;
   
   // Initialize auth store with server data
-  $: if (data.user) {
-    auth.init(data.user);
+  $: if (data.user && data.token) {
+    auth.init(data.user, data.token);
   }
 </script>
 
