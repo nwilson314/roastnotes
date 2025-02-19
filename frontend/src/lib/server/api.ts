@@ -64,7 +64,7 @@ export class ApiClient {
       return null as T;
     }
 
-    return response.json();
+    return await response.json();
   }
 
   async get<T>(path: string): Promise<T> {
