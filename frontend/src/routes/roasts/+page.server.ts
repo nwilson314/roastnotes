@@ -1,122 +1,71 @@
 import type { PageServerLoad, Actions } from './$types';
 import { error, fail, redirect } from '@sveltejs/kit';
+import type { AuthResponse } from '$lib/types';
+import { ApiClient, ApiError } from '$lib/server/api';
+import { checkSession, validateSession } from '$lib/server/auth';
 import type { Roast, UserResponse, GroupRoast, UserGroup, UserGroupRoastsResponse, GroupRoastCollection, Roaster } from '$lib/types';
 
 export const load: PageServerLoad = async ({ cookies }) => {
-  const token = cookies.get('roastnotes_token');
+  const { user, token } = await checkSession(cookies);
   const user_logged_in = !!token;
 
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json'
-  };
+  const api = new ApiClient(token ?? '');
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
+  try {
+    // Fetch trending roasts and roasters in parallel
+    const [roasts, roasters] = await Promise.all([
+      api.get<Roast[]>('/roasts/'),
+      api.get<Roaster[]>('/roasters/')
+    ]);
 
-  // Fetch trending roasts
-  const trending_res = await fetch('https://roastnotes.fly.dev/roasts/', {
-    method: 'GET',
-    headers
-  });
+    let group_roasts: GroupRoast[] = [];
+    let user_groups: UserGroup[] = [];
+    let groups: {[key: string]: GroupRoastCollection} = {};
 
-  if (!trending_res.ok) {
-    throw error(trending_res.status, 'Failed to fetch trending roasts');
-  }
+    if (user_logged_in && user) {
 
-  const roasts: Roast[] = await trending_res.json();
-
-  // Fetch all roasters
-  const roastersRes = await fetch('https://roastnotes.fly.dev/roasters/', {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json'
+      const [user_groups, user_groups_roasts_response] = await Promise.all([
+        api.get<UserGroup[]>(`/groups/user/${user.id}`),
+        api.get<UserGroupRoastsResponse>(`/groups/user/${user.id}/roasts`)
+      ]);
+      groups = user_groups_roasts_response.groups;
+      group_roasts = Object.values(groups).flatMap(group => group.roasts);
     }
-  });
 
-  if (!roastersRes.ok) {
-    if (roastersRes.status === 401) {
-      // Most likely an auth error, redirect through logout page for proper handling
-      throw redirect(303, '/auth/logout');
-    }
-    throw error(roastersRes.status, 'Failed to fetch roasters');
-  }
-
-  const roasters: Roaster[] = await roastersRes.json();
-
-  let group_roasts: GroupRoast[] = [];
-  let user_groups: UserGroup[] = [];
-  let groups: {[key: string]: GroupRoastCollection} = {};
-
-  if (user_logged_in) {
-    // Get user info from cookie
-    const user_str = cookies.get('roastnotes_user');
-    if (!user_str) {
-      throw error(401, 'User info not found');
-    }
-    const user: UserResponse = JSON.parse(user_str);
-
-    // First get user's groups
-    const groups_res = await fetch(`https://roastnotes.fly.dev/groups/user/${user.id}`, {
-      method: 'GET',
-      headers,
-      credentials: 'include'
-    });
-
-    if (!groups_res.ok) {
-      if (groups_res.status === 401) {
-        // Most likely an auth error, redirect through logout page for proper handling
+    return {
+      roasts: roasts.map((roast: Roast) => ({
+        id: roast.id,
+        user_id: roast.user_id,
+        roaster_id: roast.roaster_id,
+        name: roast.name,
+        origin: roast.origin,
+        single_origin: roast.single_origin,
+        roast_level: roast.roast_level,
+        created_at: roast.created_at,
+        bean_details: roast.bean_details,
+        cached_rating_stats: roast.cached_rating_stats
+      })),
+      group_roasts,
+      groups,
+      user_groups,
+      roasters,
+      user_logged_in
+    };
+  } catch (err) {
+    if (err instanceof ApiError) {
+      if (err.status === 401) {
         throw redirect(303, '/auth/logout');
       }
-      throw error(groups_res.status, 'Failed to fetch user groups');
+      throw error(err.status, err.message);
     }
-
-    user_groups = await groups_res.json();
-
-    // Then get all roasts for user's groups
-    const group_roasts_res = await fetch(`https://roastnotes.fly.dev/groups/user/${user.id}/roasts`, {
-      method: 'GET',
-      headers,
-      credentials: 'include'
-    });
-
-    if (!group_roasts_res.ok) {
-      throw error(group_roasts_res.status, 'Failed to fetch user group roasts');
-    }
-
-    let user_groups_roasts_response: UserGroupRoastsResponse = await group_roasts_res.json();
-    let groups = user_groups_roasts_response.groups;
-    group_roasts = Object.values(groups).flatMap(group => group.roasts);
-    console.log(roasts)
+    throw error(500, `Failed to load roasts data ${err}`);
   }
-
-  return {
-    roasts: roasts.map((roast: Roast) => ({
-      id: roast.id,
-      user_id: roast.user_id,
-      roaster_id: roast.roaster_id,
-      name: roast.name,
-      origin: roast.origin,
-      single_origin: roast.single_origin,
-      roast_level: roast.roast_level,
-      created_at: roast.created_at,
-      bean_details: roast.bean_details,
-      cached_rating_stats: roast.cached_rating_stats
-    })),
-    group_roasts,
-    groups,
-    user_groups,
-    roasters,
-    user_logged_in
-  };
 };
 
 export const actions: Actions = {
   createRoast: async ({ request, cookies }) => {
-    const token = cookies.get('roastnotes_token');
-    if (!token) {
-      throw error(401, 'Unauthorized');
-    }
+
+    const { user, token } = await validateSession(cookies);
 
     const data = await request.formData();
     const roastData = {
@@ -133,64 +82,10 @@ export const actions: Actions = {
       roaster_id: Number(data.get('roaster_id'))
     };
 
-    const res = await fetch('https://roastnotes.fly.dev/roasts/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(roastData)
-    });
-
-    if (!res.ok) {
-      return fail(res.status, { error: 'Failed to create roast' });
-    }
+    const api = new ApiClient(token ?? '');
+    const resp = await api.post('/roasts/', roastData);
 
     return { success: true };
-  },
-  submitRating: async ({ request, cookies }) => {
-    try {
-      const data = await request.formData();
-      const roastId = data.get('roast_id');
-      const rating = data.get('rating');
-      const brewMethod = data.get('brew_method');
-      const notes = data.get('notes');
-
-      if (!roastId || !rating || !brewMethod) {
-        return { type: 'error', error: { message: 'Missing required fields' } };
-      }
-
-      const token = cookies.get('roastnotes_token');
-      if (!token) {
-        return { type: 'error', error: { message: 'Not authenticated' } };
-      }
-
-      const response = await fetch(`https://roastnotes.fly.dev/roasts/${roastId}/ratings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          rating: Number(rating),
-          brew_method: brewMethod,
-          notes: notes || undefined
-        })
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        return { type: 'error', error };
-      }
-
-      return { type: 'success' };
-    } catch (error) {
-      console.error('Error submitting rating:', error);
-      return { 
-        type: 'error', 
-        error: { message: 'Failed to submit rating. Please try again.' }
-      };
-    }
   },
   getUserRatings: async ({ request, cookies }) => {
     const token = cookies.get('roastnotes_token');

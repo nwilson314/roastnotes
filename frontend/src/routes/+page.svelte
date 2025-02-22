@@ -46,7 +46,7 @@
 
 <style>
   .bg-texture {
-    background-image: url('/coffee-texture-light.png');
+    /* background-image: url('/coffee-texture-light.png'); */
     background-repeat: repeat;
     background-size: 300px 300px;
     background-blend-mode: multiply;

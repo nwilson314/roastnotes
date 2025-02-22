@@ -19,7 +19,6 @@ export const actions: Actions = {
       
       cookies.set('roastnotes_token', auth_response.token.access_token, { path: '/' });
       cookies.set('roastnotes_user', JSON.stringify(auth_response.user), { path: '/' });
-
       throw redirect(303, '/roasts');
       
     } catch (error) {
@@ -29,7 +28,7 @@ export const actions: Actions = {
           message: error.message
         });
       } else {
-        throw error;
+        throw error
       }
     }
   }

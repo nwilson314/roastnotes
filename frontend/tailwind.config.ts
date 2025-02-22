@@ -10,6 +10,7 @@ export default {
           'medium': '#4A3428',    // Roasted bean
           'light': '#8B6F5C',     // Aged wood
           'cream': '#F5E6D3',     // Steamed milk
+          'cream-light': '#F5E6D3CC', // Steamed milk with transparency
           'gold': '#D4A24C',      // Brass/copper
           'burgundy': '#732F2F',  // Terra cotta
           'olive': '#4B4A3A',     // Aged leather

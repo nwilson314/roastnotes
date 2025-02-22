@@ -59,6 +59,7 @@ class RoastResponse(BaseModel):
     """Schema for roast responses"""
     id: int
     name: str
+    roaster_id: int
     origin: str
     single_origin: bool
     roast_level: RoastLevel

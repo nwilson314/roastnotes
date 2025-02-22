@@ -3,13 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from roastnotes.core.config import settings
 from loguru import logger
 
-from roastnotes.router import users, groups, roasts, roasters
+from roastnotes.router import users, groups, roasts, roasters, ratings
 
 app = FastAPI()
 app.include_router(users.router)
 app.include_router(groups.router)
 app.include_router(roasts.router)
 app.include_router(roasters.router)
+app.include_router(ratings.router)
 
 if settings.ENVIRONMENT == "dev":
     logger.info("Running in development mode - CORS enabled for development origins")

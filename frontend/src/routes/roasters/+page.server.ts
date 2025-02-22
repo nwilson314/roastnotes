@@ -1,34 +1,20 @@
 import type { PageServerLoad, Actions } from './$types';
 import { error, fail } from '@sveltejs/kit';
 import type { Roaster } from '$lib/types';
+import { ApiClient, ApiError } from '$lib/server/api';
+import { checkSession, validateSession } from '$lib/server/auth';
 
 export const load: PageServerLoad = async ({ cookies }) => {
-  const token = cookies.get('roastnotes_token');
-  const user_logged_in = !!token;
 
-  const headers = {
-    'Content-Type': 'application/json'
-  };
-
-  const res = await fetch('https://roastnotes.fly.dev/roasters/', {
-    method: 'GET',
-    headers
-  });
-
-  if (!res.ok) {
-    throw error(res.status, 'Failed to fetch roasters');
-  }
-
-  const roasters: Roaster[] = await res.json();
+  const api = new ApiClient('');
+  const roasters = await api.get<Roaster[]>('/roasters/');
   return { roasters };
 };
 
 export const actions: Actions = {
   createRoaster: async ({ request, cookies }) => {
-    const token = cookies.get('roastnotes_token');
-    if (!token) {
-      throw error(401, 'Unauthorized');
-    }
+
+    const { user, token } = await validateSession(cookies);
 
     const data = await request.formData();
     const roasterData = {
@@ -38,18 +24,9 @@ export const actions: Actions = {
       description: data.get('description') || undefined
     };
 
-    const res = await fetch('https://roastnotes.fly.dev/roasters/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(roasterData)
-    });
-
-    if (!res.ok) {
-      throw error(res.status, 'Failed to create roaster');
-    }
+    const api = new ApiClient(token ?? '');
+    const resp = await api.post('/roasters/', roasterData);
+    console.log("Created roaster: ", resp)
 
     return { success: true };
   },

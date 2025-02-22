@@ -15,8 +15,8 @@ export class ApiError extends Error {
 }
 
 export class ApiClient {
-  // private baseUrl = 'http://localhost:8000';
-  private baseUrl = 'https://roastnotes.fly.dev';
+  private baseUrl = 'http://localhost:8000';
+  // private baseUrl = 'https://roastnotes.fly.dev';
   private token: string;
 
   constructor(token: string) {
@@ -38,11 +38,6 @@ export class ApiClient {
       ...options,
       headers,
     });
-
-    // Handle common error cases
-    if (response.status === 401) {
-      throw redirect(303, '/auth/logout');
-    }
 
     if (!response.ok) {
       let errorData;

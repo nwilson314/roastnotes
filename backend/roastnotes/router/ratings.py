@@ -54,7 +54,7 @@ def update_rating(
     return db_rating
 
 
-@router.delete("/{rating_id}", response_model=RESPONSE_404)
+@router.delete("/{rating_id}", response_model=dict[str, bool], responses=RESPONSE_404)
 def delete_rating(rating_id: int, session: Session = Depends(get_session)) -> None:
     rating = session.exec(select(Rating).where(Rating.id == rating_id)).first()
     if not rating:

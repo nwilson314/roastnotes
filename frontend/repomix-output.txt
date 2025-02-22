@@ -1,0 +1,3397 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+================================================================
+File Summary
+================================================================
+
+Purpose:
+--------
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+
+File Format:
+------------
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Multiple file entries, each consisting of:
+  a. A separator line (================)
+  b. The file path (File: path/to/file)
+  c. Another separator line
+  d. The full contents of the file
+  e. A blank line
+
+Usage Guidelines:
+-----------------
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+
+Notes:
+------
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+
+Additional Info:
+----------------
+
+================================================================
+Directory Structure
+================================================================
+src/
+  lib/
+    components/
+      AddRatingModal.svelte
+      AddRoasterModal.svelte
+      AddRoastModal.svelte
+      GroupRoastCard.svelte
+      Header.svelte
+      LandingOverview.svelte
+      RoastCard.svelte
+      SearchableDropdown.svelte
+    server/
+      api.ts
+      auth.ts
+    stores/
+      auth.ts
+    index.ts
+    types.ts
+  routes/
+    auth/
+      logout/
+        +page.server.ts
+        +page.svelte
+    login/
+      +page.server.ts
+      +page.svelte
+    profile/
+      +page.server.ts
+      +page.svelte
+    register/
+      +page.server.ts
+      +page.svelte
+    roasters/
+      +page.server.ts
+      +page.svelte
+    roasts/
+      +page.server.ts
+      +page.svelte
+    texture-test/
+      +page.svelte
+    +layout.server.ts
+    +layout.svelte
+    +page.server.ts
+    +page.svelte
+  app.css
+  app.d.ts
+  app.html
+.gitignore
+.npmrc
+.prettierignore
+.prettierrc
+eslint.config.js
+package.json
+postcss.config.js
+README.md
+svelte.config.js
+tailwind.config.ts
+tsconfig.json
+vite.config.ts
+
+================================================================
+Files
+================================================================
+
+================
+File: src/lib/components/AddRatingModal.svelte
+================
+<script lang="ts">
+  import { createEventDispatcher } from 'svelte';
+  import Modal from './Modal.svelte';
+  import type { Rating } from '$lib/types';
+  import { convertRatingToFiveScale, convertRatingToHundredScale } from '$lib/types';
+
+  export let show = false;
+  export let roastId: number;
+  export let roastName: string;
+  export let groupId: number | undefined = undefined;
+  export let existingRating: Rating | undefined = undefined;
+
+  const dispatch = createEventDispatcher<{
+    close: void;
+    submit: { rating: Omit<Rating, 'id' | 'user_id' | 'created_at'> };
+  }>();
+
+  // Form state
+  let rating = existingRating?.overall_score ? convertRatingToFiveScale(existingRating.overall_score) : 3;
+  let brewMethod = existingRating?.brew_method ?? '';
+  let ratio = existingRating?.ratio ?? '1:16';
+  let temperature = existingRating?.temperature ?? 95;
+  let grind = existingRating?.grind ?? '';
+  let tastingNotes = existingRating?.tasting_notes ?? '';
+  let preferredMethod = existingRating?.preferred_method ?? false;
+
+  const commonBrewMethods = [
+    'V60',
+    'Aeropress',
+    'French Press',
+    'Moka Pot',
+    'Espresso',
+    'Chemex',
+    'Cold Brew'
+  ];
+
+  function handleClose() {
+    dispatch('close');
+  }
+
+  function handleSubmit() {
+    dispatch('submit', {
+      rating: {
+        roast_id: roastId,
+        group_id: groupId,
+        brew_method: brewMethod,
+        preferred_method: preferredMethod,
+        ratio,
+        temperature,
+        grind,
+        tasting_notes: tastingNotes || undefined,
+        overall_score: convertRatingToHundredScale(rating)
+      }
+    });
+    handleClose();
+  }
+</script>
+
+<Modal {show} on:close={handleClose}>
+  <div class="w-full max-w-2xl">
+    <div class="bg-white rounded-xl shadow-warm overflow-hidden">
+      <!-- Header -->
+      <div class="px-6 py-4 bg-coffee-deep text-white">
+        <h2 class="text-xl font-garamond">
+          {existingRating ? 'Update Rating' : 'Add Rating'} for {roastName}
+        </h2>
+      </div>
+
+      <!-- Form -->
+      <form class="p-6 space-y-6" on:submit|preventDefault={handleSubmit}>
+        <!-- Rating -->
+        <div>
+          <label class="block font-garamond text-lg text-coffee-deep mb-2">
+            Overall Rating
+          </label>
+          <div class="flex items-center space-x-2">
+            {#each Array(5) as _, i}
+              <button
+                type="button"
+                class="text-2xl focus:outline-none"
+                class:text-coffee-gold={i < rating}
+                class:text-coffee-light={i >= rating}
+                on:click={() => rating = i + 1}
+              >
+                ★
+              </button>
+            {/each}
+            <span class="text-coffee-medium ml-2">({rating} / 5)</span>
+          </div>
+        </div>
+
+        <!-- Brew Method -->
+        <div>
+          <label class="block font-garamond text-lg text-coffee-deep mb-2">
+            Brew Method
+          </label>
+          <div class="flex flex-wrap gap-2 mb-2">
+            {#each commonBrewMethods as method}
+              <button
+                type="button"
+                class="px-3 py-1 rounded-full text-sm transition-colors"
+                class:bg-coffee-deep={brewMethod === method}
+                class:text-white={brewMethod === method}
+                class:bg-coffee-cream/30={brewMethod !== method}
+                class:text-coffee-deep={brewMethod !== method}
+                on:click={() => brewMethod = method}
+              >
+                {method}
+              </button>
+            {/each}
+          </div>
+          <input
+            type="text"
+            bind:value={brewMethod}
+            placeholder="Or enter your own method..."
+            class="w-full px-3 py-2 rounded-lg bg-coffee-cream/10 border border-coffee-light/20 
+                   focus:outline-none focus:border-coffee-medium/40 text-coffee-deep placeholder:text-coffee-medium/50"
+          />
+          <label class="flex items-center mt-2 text-coffee-medium">
+            <input
+              type="checkbox"
+              bind:checked={preferredMethod}
+              class="mr-2"
+            />
+            This is my preferred method for this roast
+          </label>
+        </div>
+
+        <!-- Ratio -->
+        <div>
+          <label class="block font-garamond text-lg text-coffee-deep mb-2">
+            Water to Coffee Ratio
+          </label>
+          <div class="flex items-center space-x-2">
+            <input
+              type="text"
+              bind:value={ratio}
+              placeholder="e.g., 1:16"
+              class="w-32 px-3 py-2 rounded-lg bg-coffee-cream/10 border border-coffee-light/20 
+                     focus:outline-none focus:border-coffee-medium/40 text-coffee-deep"
+            />
+            <span class="text-coffee-medium">(water:coffee)</span>
+          </div>
+        </div>
+
+        <!-- Temperature -->
+        <div>
+          <label class="block font-garamond text-lg text-coffee-deep mb-2">
+            Water Temperature (°C)
+          </label>
+          <input
+            type="number"
+            bind:value={temperature}
+            min="0"
+            max="100"
+            step="0.5"
+            class="w-32 px-3 py-2 rounded-lg bg-coffee-cream/10 border border-coffee-light/20 
+                   focus:outline-none focus:border-coffee-medium/40 text-coffee-deep"
+          />
+        </div>
+
+        <!-- Grind -->
+        <div>
+          <label class="block font-garamond text-lg text-coffee-deep mb-2">
+            Grind Details
+          </label>
+          <input
+            type="text"
+            bind:value={grind}
+            placeholder="e.g., Medium-fine, 15 clicks on Comandante"
+            class="w-full px-3 py-2 rounded-lg bg-coffee-cream/10 border border-coffee-light/20 
+                   focus:outline-none focus:border-coffee-medium/40 text-coffee-deep placeholder:text-coffee-medium/50"
+          />
+        </div>
+
+        <!-- Tasting Notes -->
+        <div>
+          <label class="block font-garamond text-lg text-coffee-deep mb-2">
+            Tasting Notes
+          </label>
+          <textarea
+            bind:value={tastingNotes}
+            rows="3"
+            placeholder="Share your thoughts on the flavor profile..."
+            class="w-full px-3 py-2 rounded-lg bg-coffee-cream/10 border border-coffee-light/20 
+                   focus:outline-none focus:border-coffee-medium/40 text-coffee-deep placeholder:text-coffee-medium/50"
+          ></textarea>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex justify-end space-x-3">
+          <button
+            type="button"
+            class="px-4 py-2 text-coffee-medium hover:text-coffee-deep transition-colors"
+            on:click={handleClose}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="px-6 py-2 bg-coffee-deep text-white rounded-lg hover:bg-coffee-deep/90 
+                   transition-colors font-medium"
+          >
+            {existingRating ? 'Update Rating' : 'Add Rating'}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</Modal>
+
+================
+File: src/lib/components/AddRoasterModal.svelte
+================
+<script lang="ts">
+  import { enhance } from '$app/forms';
+  import type { Roaster } from '$lib/types';
+
+  export let show = false;
+  export let onClose = () => {};
+  export let onRoasterAdded = () => {};
+
+  let name = '';
+  let location = '';
+  let website = '';
+  let description = '';
+  let error: string | null = null;
+
+  function closeModal() {
+    name = '';
+    location = '';
+    website = '';
+    description = '';
+    error = null;
+    onClose();
+  }
+
+  async function handleSubmit(event: SubmitEvent) {
+    error = null;
+    if (!name.trim()) {
+      error = 'Name is required';
+      return;
+    }
+  }
+</script>
+
+{#if show}
+  <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-xl" 
+         role="dialog" 
+         aria-modal="true">
+      <!-- Header -->
+      <div class="px-6 py-4 border-b border-coffee-light/20 flex items-center justify-between">
+        <h2 class="text-xl font-medium text-coffee-deep">Add New Roaster</h2>
+        <button 
+          class="text-coffee-medium hover:text-coffee-deep p-1 rounded-lg 
+                 hover:bg-coffee-light/10 transition-colors duration-200"
+          onclick={closeModal}
+        >
+          <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Form -->
+      <form 
+        method="POST" 
+        action="?/createRoaster" 
+        use:enhance={() => {
+          return async ({ result }) => {
+            if (result.type === 'success') {
+              closeModal();
+              onRoasterAdded();
+            } else if (result.type === 'error') {
+              error = result.error?.message || 'Failed to create roaster';
+            }
+          };
+        }}
+        class="p-6 space-y-4"
+      >
+        {#if error}
+          <div class="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {error}
+          </div>
+        {/if}
+
+        <!-- Name -->
+        <div class="space-y-1">
+          <label for="name" class="block text-sm font-medium text-coffee-deep">
+            Name <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            bind:value={name}
+            class="w-full px-3 py-2 rounded-lg border border-coffee-light/20 
+                   focus:outline-none focus:ring-2 focus:ring-coffee-cream
+                   placeholder:text-coffee-medium/50"
+            placeholder="Counter Culture Coffee"
+          />
+        </div>
+
+        <!-- Location -->
+        <div class="space-y-1">
+          <label for="location" class="block text-sm font-medium text-coffee-deep">
+            Location
+          </label>
+          <input
+            type="text"
+            id="location"
+            name="location"
+            bind:value={location}
+            class="w-full px-3 py-2 rounded-lg border border-coffee-light/20 
+                   focus:outline-none focus:ring-2 focus:ring-coffee-cream
+                   placeholder:text-coffee-medium/50"
+            placeholder="Durham, NC"
+          />
+        </div>
+
+        <!-- Website -->
+        <div class="space-y-1">
+          <label for="website" class="block text-sm font-medium text-coffee-deep">
+            Website
+          </label>
+          <input
+            type="url"
+            id="website"
+            name="website"
+            bind:value={website}
+            class="w-full px-3 py-2 rounded-lg border border-coffee-light/20 
+                   focus:outline-none focus:ring-2 focus:ring-coffee-cream
+                   placeholder:text-coffee-medium/50"
+            placeholder="https://counterculturecoffee.com"
+          />
+        </div>
+
+        <!-- Description -->
+        <div class="space-y-1">
+          <label for="description" class="block text-sm font-medium text-coffee-deep">
+            Description
+          </label>
+          <textarea
+            id="description"
+            name="description"
+            bind:value={description}
+            rows="3"
+            class="w-full px-3 py-2 rounded-lg border border-coffee-light/20 
+                   focus:outline-none focus:ring-2 focus:ring-coffee-cream
+                   placeholder:text-coffee-medium/50 resize-none"
+            placeholder="Quality focused coffee roaster since 1995"
+          ></textarea>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex justify-end space-x-3 pt-2">
+          <button
+            type="button"
+            class="px-4 py-2 rounded-lg border border-coffee-light/20 text-coffee-medium 
+                   hover:bg-coffee-light/10 transition-colors duration-200"
+            onclick={closeModal}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="px-4 py-2 rounded-lg bg-coffee-deep text-coffee-cream 
+                   hover:bg-coffee-medium transition-colors duration-200"
+          >
+            Add Roaster
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+{/if}
+
+================
+File: src/lib/components/AddRoastModal.svelte
+================
+<script lang="ts">
+  import type { UserGroup, Roaster } from '$lib/types';
+  import { RoastLevel } from '$lib/types';
+  import SearchableDropdown from './SearchableDropdown.svelte';
+  import { enhance } from '$app/forms';
+
+  export let show = false;
+  export let userGroups: UserGroup[] = [];
+  export let selectedGroupId: number | null = null;
+  export let onClose = () => {};
+  export let onRoastAdded = () => {};
+  export let roasters: Roaster[] = [];
+
+  let name = '';
+  let origin = '';
+  let singleOrigin = false;
+  let roastLevel = RoastLevel.medium;
+  let species = '';
+  let cultivar = '';
+  let processingMethod = '';
+  let altitude: number | undefined = undefined;
+  let selectedGroup = selectedGroupId;
+  let selectedRoaster: Roaster | null = null;
+  let isSubmitting = false;
+  let error: string | null = null;
+
+  const roastLevels = [
+    { value: RoastLevel.light, label: 'Light' },
+    { value: RoastLevel.medium, label: 'Medium' },
+    { value: RoastLevel.dark, label: 'Dark' }
+  ];
+
+  function closeModal() {
+    // Reset form
+    name = '';
+    origin = '';
+    singleOrigin = false;
+    roastLevel = RoastLevel.medium;
+    species = '';
+    cultivar = '';
+    processingMethod = '';
+    altitude = undefined;
+    selectedGroup = selectedGroupId;
+    selectedRoaster = null;
+    error = null;
+    show = false;
+    onClose();
+  }
+
+  function handleSubmit(event: SubmitEvent) {
+    error = null;
+    if (!name.trim()) {
+      error = 'Name is required';
+      return;
+    }
+    if (!origin.trim()) {
+      error = 'Origin is required';
+      return;
+    }
+    if (!selectedRoaster) {
+      error = 'Roaster is required';
+      return;
+    }
+    if (!species.trim()) {
+      error = 'Coffee species is required';
+      return;
+    }
+  }
+</script>
+
+{#if show}
+  <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-xl" 
+         role="dialog" 
+         aria-modal="true">
+      <!-- Header -->
+      <div class="px-6 py-4 border-b border-coffee-light/20 flex items-center justify-between">
+        <h2 class="text-xl font-medium text-coffee-deep">Add New Roast</h2>
+        <button 
+          class="text-coffee-medium hover:text-coffee-deep p-1 rounded-lg 
+                 hover:bg-coffee-light/10 transition-colors duration-200"
+          onclick={closeModal}
+        >
+          <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Form -->
+      <form 
+        method="POST" 
+        action="?/createRoast" 
+        use:enhance={() => {
+          isSubmitting = true;
+          return async ({ result }) => {
+            isSubmitting = false;
+            if (result.type === 'success') {
+              onRoastAdded();
+              closeModal();
+            } else if (result.type === 'error') {
+              error = result.error?.message || 'Failed to create roast';
+            }
+          };
+        }}
+        onsubmit={handleSubmit}
+        class="p-6 space-y-4"
+      >
+        {#if error}
+          <div class="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {error}
+          </div>
+        {/if}
+
+        <!-- Roaster -->
+        <SearchableDropdown
+          bind:selectedValue={selectedRoaster}
+          label="Roaster"
+          placeholder="Search for a roaster..."
+          required
+          allRoasters={roasters}
+        />
+        <input type="hidden" name="roaster_id" value={selectedRoaster?.id || ''}>
+
+        <!-- Name -->
+        <div>
+          <label for="name" class="block text-sm font-medium text-coffee-deep mb-1">
+            Name <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            bind:value={name}
+            class="w-full px-3 py-2 rounded-lg border border-coffee-light/20 
+                   focus:outline-none focus:ring-2 focus:ring-coffee-cream"
+            placeholder="e.g., Ethiopia Yirgacheffe"
+            required
+          />
+        </div>
+
+        <!-- Origin -->
+        <div>
+          <label for="origin" class="block text-sm font-medium text-coffee-deep mb-1">
+            Origin <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            id="origin"
+            name="origin"
+            bind:value={origin}
+            class="w-full px-3 py-2 rounded-lg border border-coffee-light/20 
+                   focus:outline-none focus:ring-2 focus:ring-coffee-cream"
+            placeholder="e.g., Ethiopia"
+            required
+          />
+        </div>
+
+        <!-- Single Origin -->
+        <div class="flex items-center">
+          <input
+            type="checkbox"
+            id="single-origin"
+            name="single_origin"
+            bind:checked={singleOrigin}
+            class="h-4 w-4 text-coffee-deep rounded border-coffee-light/20 
+                   focus:ring-coffee-cream focus:ring-2"
+          />
+          <label for="single-origin" class="ml-2 text-sm text-coffee-deep">
+            Single Origin
+          </label>
+        </div>
+
+        <!-- Roast Level -->
+        <div>
+          <label for="roast-level" class="block text-sm font-medium text-coffee-deep mb-1">
+            Roast Level
+          </label>
+          <select
+            id="roast-level"
+            name="roast_level"
+            bind:value={roastLevel}
+            class="w-full px-3 py-2 rounded-lg border border-coffee-light/20 
+                   focus:outline-none focus:ring-2 focus:ring-coffee-cream"
+          >
+            {#each roastLevels as level}
+              <option value={level.value}>{level.label}</option>
+            {/each}
+          </select>
+        </div>
+
+        <!-- Bean Details -->
+        <div class="space-y-4">
+          <h3 class="font-medium text-coffee-deep">Bean Details</h3>
+          
+          <!-- Species -->
+          <div>
+            <label for="species" class="block text-sm font-medium text-coffee-deep mb-1">
+              Species <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="species"
+              name="species"
+              bind:value={species}
+              class="w-full px-3 py-2 rounded-lg border border-coffee-light/20 
+                     focus:outline-none focus:ring-2 focus:ring-coffee-cream"
+              placeholder="e.g., Arabica"
+              required
+            />
+          </div>
+
+          <!-- Cultivar -->
+          <div>
+            <label for="cultivar" class="block text-sm font-medium text-coffee-deep mb-1">
+              Cultivar
+            </label>
+            <input
+              type="text"
+              id="cultivar"
+              name="cultivar"
+              bind:value={cultivar}
+              class="w-full px-3 py-2 rounded-lg border border-coffee-light/20 
+                     focus:outline-none focus:ring-2 focus:ring-coffee-cream"
+              placeholder="e.g., Bourbon"
+            />
+          </div>
+
+          <!-- Processing Method -->
+          <div>
+            <label for="processing-method" class="block text-sm font-medium text-coffee-deep mb-1">
+              Processing Method
+            </label>
+            <input
+              type="text"
+              id="processing-method"
+              name="processing_method"
+              bind:value={processingMethod}
+              class="w-full px-3 py-2 rounded-lg border border-coffee-light/20 
+                     focus:outline-none focus:ring-2 focus:ring-coffee-cream"
+              placeholder="e.g., Washed"
+            />
+          </div>
+
+          <!-- Altitude -->
+          <div>
+            <label for="altitude" class="block text-sm font-medium text-coffee-deep mb-1">
+              Altitude (meters)
+            </label>
+            <input
+              type="number"
+              id="altitude"
+              name="altitude"
+              bind:value={altitude}
+              class="w-full px-3 py-2 rounded-lg border border-coffee-light/20 
+                     focus:outline-none focus:ring-2 focus:ring-coffee-cream"
+              placeholder="e.g., 1800"
+            />
+          </div>
+        </div>
+
+        <!-- Group Selection -->
+        {#if userGroups.length > 0}
+          <div>
+            <label for="group" class="block text-sm font-medium text-coffee-deep mb-1">
+              Share with Group
+            </label>
+            <select
+              id="group"
+              bind:value={selectedGroup}
+              class="w-full px-3 py-2 rounded-lg border border-coffee-light/20 
+                     focus:outline-none focus:ring-2 focus:ring-coffee-cream"
+            >
+              <option value={null}>No Group</option>
+              {#each userGroups as group}
+                <option value={group.id}>{group.name}</option>
+              {/each}
+            </select>
+          </div>
+        {/if}
+
+        <!-- Submit Button -->
+        <div class="pt-2">
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            class="w-full px-4 py-2 bg-coffee-deep text-coffee-cream rounded-lg
+                   hover:bg-coffee-medium transition-colors duration-200
+                   disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? 'Adding Roast...' : 'Add Roast'}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+{/if}
+
+================
+File: src/lib/components/GroupRoastCard.svelte
+================
+<script lang="ts">
+  import type { GroupRoast } from '$lib/types';
+  
+  export let roast: GroupRoast;
+
+  $: ratingDiff = roast.group_rating - roast.global_rating;
+  $: ratingColor = ratingDiff > 0 ? 'text-emerald-500' : ratingDiff < 0 ? 'text-rose-500' : 'text-coffee-medium';
+  $: ratingIcon = ratingDiff > 0 ? '↑' : ratingDiff < 0 ? '↓' : '•';
+</script>
+
+<div class="bg-white rounded-xl border border-coffee-light/20 shadow-warm overflow-hidden">
+  <div class="p-6 bg-coffee-paper/30">
+    <!-- Header: Name, Origin, Rating -->
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-full bg-coffee-deep/10 flex items-center justify-center">
+          <span class="font-garamond text-coffee-deep text-lg">
+            {roast.name.substring(0, 2)}
+          </span>
+        </div>
+        <div class="text-left">
+          <h3 class="font-garamond text-xl text-coffee-deep">{roast.name}</h3>
+          <p class="text-sm text-coffee-medium">{roast.origin}</p>
+        </div>
+      </div>
+      <div class="text-right">
+        <div class="flex items-baseline justify-end">
+          <span class="text-2xl font-garamond text-coffee-gold">{roast.group_rating.toFixed(1)}</span>
+          <span class="text-sm text-coffee-medium ml-1">/5</span>
+        </div>
+        <p class="text-xs text-coffee-medium">
+          {roast.group_total_ratings} group rating{roast.group_total_ratings !== 1 ? 's' : ''}
+        </p>
+      </div>
+    </div>
+
+    <!-- Rating Comparison -->
+    <div class="mt-4 p-3 rounded-lg bg-white/50 border border-coffee-light/10">
+      <div class="flex items-center justify-between mb-2">
+        <h4 class="font-garamond text-lg text-coffee-deep">Ratings</h4>
+        <div class="flex items-center space-x-1">
+          <span class={ratingColor}>{ratingIcon}</span>
+          <span class="text-sm text-coffee-medium">
+            {Math.abs(ratingDiff).toFixed(1)} {ratingDiff > 0 ? 'higher' : ratingDiff < 0 ? 'lower' : 'same'} than global
+          </span>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-2 gap-4">
+        <!-- Group Rating -->
+        <div class="text-center p-2 rounded-lg bg-coffee-cream/10">
+          <p class="text-sm text-coffee-medium mb-1">Group</p>
+          <div class="flex items-baseline justify-center">
+            <span class="text-xl font-garamond text-coffee-gold">{roast.group_rating.toFixed(1)}</span>
+            <span class="text-xs text-coffee-medium ml-1">/5</span>
+          </div>
+          <p class="text-xs text-coffee-medium mt-1">
+            {roast.group_total_ratings} rating{roast.group_total_ratings !== 1 ? 's' : ''}
+          </p>
+        </div>
+
+        <!-- Global Rating -->
+        <div class="text-center p-2 rounded-lg bg-coffee-cream/10">
+          <p class="text-sm text-coffee-medium mb-1">Global</p>
+          <div class="flex items-baseline justify-center">
+            <span class="text-xl font-garamond text-coffee-gold">{roast.global_rating.toFixed(1)}</span>
+            <span class="text-xs text-coffee-medium ml-1">/5</span>
+          </div>
+          <p class="text-xs text-coffee-medium mt-1">
+            {roast.global_total_ratings} rating{roast.global_total_ratings !== 1 ? 's' : ''}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Added By -->
+    <div class="mt-4 text-sm text-coffee-medium">
+      <p>Added by {roast.added_by} • {new Date(roast.added_at).toLocaleDateString()}</p>
+      {#if roast.notes}
+        <p class="mt-2 italic">{roast.notes}</p>
+      {/if}
+    </div>
+  </div>
+</div>
+
+================
+File: src/lib/components/Header.svelte
+================
+<script lang="ts">
+  import type { LayoutData } from '../../routes/$types';
+  import { enhance } from '$app/forms';
+  
+  export let data: LayoutData;
+</script>
+
+<nav class="fixed top-0 left-0 right-0 w-full bg-coffee-deep shadow-lg z-50 border-b border-coffee-gold border-opacity-20">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center h-16">
+      <div class="flex-shrink-0">
+        <a href={data.user_logged_in ? "/roasts" : "/"} class="flex items-center group">
+          <span class="font-garamond text-3xl font-medium text-coffee-cream group-hover:text-coffee-gold transition-colors duration-300 text-shadow">
+            RoastNotes
+          </span>
+          <span class="ml-2 text-coffee-gold text-opacity-80 italic font-garamond text-sm">
+            il gusto del caffè
+          </span>
+        </a>
+      </div>
+      
+      <div class="flex items-center space-x-4">
+        {#if data.user_logged_in}
+          <div class="flex items-center space-x-4">
+            <nav class="flex items-center space-x-2 mr-4">
+              <a href="/roasts" class="px-3 py-1.5 rounded-lg text-coffee-cream hover:bg-coffee-medium/30 transition-colors duration-200 text-sm font-medium">Roasts</a>
+              <a href="/roasters" class="px-3 py-1.5 rounded-lg text-coffee-cream hover:bg-coffee-medium/30 transition-colors duration-200 text-sm font-medium">Roasters</a>
+            </nav>
+            <a href="/profile" class="flex items-center space-x-3 group">
+              <div class="w-10 h-10 rounded-full bg-coffee-cream/20 border-2 border-coffee-gold/30 
+                          flex items-center justify-center group-hover:border-coffee-gold/50 
+                          transition-all duration-300">
+                <span class="font-garamond text-xl text-coffee-cream group-hover:text-coffee-gold">
+                  {data.user?.email?.[0]?.toUpperCase() ?? 'U'}
+                </span>
+              </div>
+            </a>
+            <form 
+              method="POST" 
+              action="/auth/logout"
+              use:enhance
+            >
+              <button type="submit" 
+                class="px-4 py-2 rounded-lg text-coffee-cream hover:bg-coffee-medium/30 
+                       transition-colors duration-200 text-sm font-medium border border-coffee-gold/20">
+                Logout
+              </button>
+            </form>
+          </div>
+        {:else}
+          <div class="flex items-center space-x-4">
+            <a
+              href="/register"
+              class="px-4 py-2 rounded-lg bg-coffee-deep text-coffee-cream 
+                     hover:bg-coffee-medium transition-colors duration-200
+                     border border-coffee-gold/20"
+            >
+              Join the Table
+            </a>
+            <a
+              href="/login"
+              class="px-4 py-2 rounded-lg bg-coffee-cream/50 text-coffee-deep 
+                     hover:bg-coffee-cream transition-colors duration-200
+                     border border-coffee-gold/20"
+            >
+              Sign In
+            </a>
+          </div>
+        {/if}
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- Spacer to prevent content from being hidden under fixed header -->
+<div class="h-16"></div>
+
+<style>
+  .text-shadow {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+  }
+</style>
+
+================
+File: src/lib/components/LandingOverview.svelte
+================
+<script lang="ts">
+  import RoastCard from './RoastCard.svelte';
+  import { RoastLevel } from '$lib/types';
+  import type { Roast } from '$lib/types';
+
+  // Feature highlights for the landing page
+  const features = [
+    {
+      title: "Share Your Roasts",
+      description: "Document your coffee journey with rich bean details and brewing notes"
+    },
+    {
+      title: "Rate Your Brews",
+      description: "Score each method - from V60 to Moka pot - capturing the perfect cup"
+    },
+    {
+      title: "Join the Table",
+      description: "Connect with fellow coffee lovers in a warm, inviting space"
+    }
+  ];
+
+  // Sample roast for preview
+  const sampleRoast: Roast = {
+    id: 0,
+    user_id: 0,
+    roaster_id: 1,
+    name: "Ethiopian Yirgacheffe",
+    origin: "Ethiopia",
+    single_origin: true,
+    roast_level: RoastLevel.light,
+    created_at: new Date().toISOString(),
+    bean_details: {
+      id: 0,
+      roast_id: 0,
+      species: "Arabica",
+      cultivar: "Heirloom",
+      processing_method: "Washed",
+      altitude: 1900,
+      extra: {
+        region: "Yirgacheffe"
+      }
+    },
+    cached_rating_stats: {
+      avg_rating: 4.8,
+      total_ratings: 42,
+      brew_methods: {
+        'V60': {
+          count: 18,
+          avg_rating: 4.9
+        },
+        'Chemex': {
+          count: 12,
+          avg_rating: 4.7
+        },
+        'AeroPress': {
+          count: 8,
+          avg_rating: 4.8
+        }
+      }
+    }
+  };
+</script>
+
+<section class="relative py-8 overflow-hidden">
+  <div class="absolute inset-0 bg-coffee-paper bg-opacity-50"></div>
+  
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center mb-12">
+      <!-- Preview Section -->
+      <div class="mb-12">
+        <h1 class="text-4xl font-garamond font-medium text-coffee-deep mb-4">
+          Share Your Coffee Journey
+        </h1>
+        <p class="text-lg text-coffee-medium mb-8">
+          Join our community of coffee enthusiasts and share your roasting experiences
+        </p>
+        <div class="flex gap-4 justify-center mb-16">
+          <a 
+            href="/roasts" 
+            class="px-6 py-3 rounded-lg bg-coffee-medium text-coffee-cream 
+                   hover:bg-coffee-deep transition-colors duration-200
+                   border border-coffee-gold/20"
+          >
+            View Roasts
+          </a>
+          <a 
+            href="/register" 
+            class="px-6 py-3 rounded-lg bg-coffee-cream text-coffee-medium
+                   hover:bg-coffee-light hover:text-coffee-deep transition-colors duration-200
+                   border border-coffee-light"
+          >
+            Join Now
+          </a>
+        </div>
+        <p class="max-w-2xl mx-auto text-coffee-medium mb-6 text-lg">
+          Rate your roasts, share brewing methods, and discover new flavors.
+          Here's how your roast will look:
+        </p>
+        
+        <div class="max-w-2xl mx-auto">
+          <RoastCard roast={sampleRoast} />
+        </div>
+      </div>
+      
+      <!-- Feature Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
+        {#each features as feature}
+          <div class="p-6 bg-white/80 rounded-xl shadow-warm
+                      border border-coffee-light/10
+                      transition-all duration-300 ease-out 
+                      hover:shadow-warm-lg hover:scale-101">
+            <h3 class="font-garamond text-2xl text-coffee-deep mb-4">
+              {feature.title}
+            </h3>
+            <p class="text-coffee-medium">
+              {feature.description}
+            </p>
+          </div>
+        {/each}
+      </div>
+    </div>
+  </div>
+  
+  <!-- Decorative elements -->
+  <div class="absolute top-1/2 left-0 w-96 h-96 -translate-y-1/2 -translate-x-1/2 
+              bg-coffee-gold/5 rounded-full blur-3xl"></div>
+  <div class="absolute top-1/2 right-0 w-96 h-96 -translate-y-1/2 translate-x-1/2 
+              bg-coffee-burgundy/5 rounded-full blur-3xl"></div>
+  
+  <!-- Subtle grain texture overlay -->
+  <div class="absolute inset-0 bg-texture opacity-20 pointer-events-none"></div>
+</section>
+
+<style>
+  /* Add any additional custom styles here if needed */
+</style>
+
+================
+File: src/lib/components/RoastCard.svelte
+================
+<script lang="ts">
+  import type { Roast } from '$lib/types';
+  
+  export let roast: Roast;
+
+  // Get top 3 brew methods by rating
+  $: topBrewMethods = roast.cached_rating_stats?.brew_methods 
+    ? Object.entries(roast.cached_rating_stats.brew_methods)
+        .sort((a, b) => b[1].avg_rating - a[1].avg_rating)
+        .slice(0, 3)
+    : [];
+</script>
+
+<div class="bg-white rounded-xl border border-coffee-light/20 shadow-warm overflow-hidden">
+  <div class="p-6 bg-coffee-paper/30">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-full bg-coffee-deep/10 flex items-center justify-center">
+          <span class="font-garamond text-coffee-deep text-lg">
+            {roast.name.substring(0, 2)}
+          </span>
+        </div>
+        <div class="text-left">
+          <h3 class="font-garamond text-xl text-coffee-deep">{roast.name}</h3>
+          <p class="text-sm text-coffee-medium">{roast.roast_level} • {roast.origin}</p>
+        </div>
+      </div>
+      {#if roast.cached_rating_stats}
+        <div class="text-right">
+          <div class="flex items-baseline justify-end">
+            <span class="text-2xl font-garamond text-coffee-gold">{roast.cached_rating_stats.avg_rating.toFixed(1)}</span>
+            <span class="text-sm text-coffee-medium ml-1">/5</span>
+          </div>
+          <p class="text-xs text-coffee-medium">
+            {roast.cached_rating_stats.total_ratings} rating{roast.cached_rating_stats.total_ratings !== 1 ? 's' : ''}
+          </p>
+        </div>
+      {/if}
+    </div>
+    
+    <!-- Top Brew Methods -->
+    {#if topBrewMethods.length > 0}
+      <div class="mt-4">
+        <h4 class="font-garamond text-lg text-coffee-deep mb-2">Top Brewing Methods</h4>
+        <div class="grid grid-cols-3 gap-4">
+          {#each topBrewMethods as [method, stats]}
+            <div class="p-3 rounded-lg bg-white/50 border border-coffee-light/10 
+                       hover:shadow-warm transition-all duration-300">
+              <h5 class="font-garamond text-coffee-deep mb-1">{method}</h5>
+              <div class="flex items-baseline justify-center">
+                <span class="text-xl font-garamond text-coffee-gold">{stats.avg_rating.toFixed(1)}</span>
+                <span class="text-xs text-coffee-medium ml-1">/5</span>
+              </div>
+              <p class="text-xs text-coffee-medium text-center mt-1">
+                {stats.count} brew{stats.count !== 1 ? 's' : ''}
+              </p>
+            </div>
+          {/each}
+        </div>
+      </div>
+    {/if}
+    
+    <!-- Bean Details -->
+    {#if roast.bean_details}
+      <div class="mt-6">
+        <h4 class="font-garamond text-lg text-coffee-deep mb-2">Bean Details</h4>
+        <div class="flex flex-wrap gap-2">
+          <div class="inline-flex items-center px-3 py-1 rounded-full bg-coffee-cream/30 text-coffee-deep text-sm">
+            <span class="font-medium">{roast.bean_details.species}</span>
+          </div>
+          {#if roast.bean_details.cultivar}
+            <div class="inline-flex items-center px-3 py-1 rounded-full bg-coffee-cream/30 text-coffee-deep text-sm">
+              <span class="text-coffee-medium mr-1">Cultivar:</span>
+              <span class="font-medium">{roast.bean_details.cultivar}</span>
+            </div>
+          {/if}
+          {#if roast.bean_details.processing_method}
+            <div class="inline-flex items-center px-3 py-1 rounded-full bg-coffee-cream/30 text-coffee-deep text-sm">
+              <span class="text-coffee-medium mr-1">Process:</span>
+              <span class="font-medium">{roast.bean_details.processing_method}</span>
+            </div>
+          {/if}
+          {#if roast.bean_details.altitude}
+            <div class="inline-flex items-center px-3 py-1 rounded-full bg-coffee-cream/30 text-coffee-deep text-sm">
+              <span class="text-coffee-medium mr-1">Altitude:</span>
+              <span class="font-medium">{roast.bean_details.altitude}m</span>
+            </div>
+          {/if}
+          {#if roast.bean_details.extra?.region}
+            <div class="inline-flex items-center px-3 py-1 rounded-full bg-coffee-cream/30 text-coffee-deep text-sm">
+              <span class="text-coffee-medium mr-1">Region:</span>
+              <span class="font-medium">{roast.bean_details.extra.region}</span>
+            </div>
+          {/if}
+        </div>
+      </div>
+    {/if}
+  </div>
+</div>
+
+<style>
+  .bg-coffee-paper {
+    background-color: #F5F5DC;
+  }
+  .bg-coffee-cream {
+    background-color: #FFF599;
+  }
+  .text-coffee-deep {
+    color: #786C3B;
+  }
+  .text-coffee-medium {
+    color: #964B00;
+  }
+  .text-coffee-gold {
+    color: #FFD700;
+  }
+  .border-coffee-light {
+    border-color: #F5F5DC;
+  }
+  .border-coffee-gold {
+    border-color: #FFD700;
+  }
+  .shadow-warm {
+    box-shadow: 0 4px 8px rgba(255, 215, 0, 0.2);
+  }
+</style>
+
+================
+File: src/lib/components/SearchableDropdown.svelte
+================
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import type { Roaster } from '$lib/types';
+
+  export let selectedValue: Roaster | null = null;
+  export let placeholder = 'Search...';
+  export let label = '';
+  export let required = false;
+  export let allRoasters: Roaster[] = [];
+
+  let searchTerm = '';
+  let isOpen = false;
+  let inputElement: HTMLInputElement;
+
+  $: filteredRoasters = searchTerm
+    ? allRoasters.filter(roaster => {
+        const search = searchTerm.toLowerCase();
+        return (
+          roaster.name.toLowerCase().includes(search) ||
+          (roaster.location?.toLowerCase().includes(search)) ||
+          (roaster.description?.toLowerCase().includes(search))
+        );
+      })
+    : [];
+
+  function handleSelect(option: Roaster) {
+    selectedValue = option;
+    searchTerm = option.name;
+    isOpen = false;
+  }
+
+  function handleFocus() {
+    if (searchTerm) {
+      isOpen = true;
+    }
+  }
+
+  function handleBlur() {
+    // Delay closing to allow click events to fire
+    setTimeout(() => {
+      isOpen = false;
+      if (!selectedValue) {
+        searchTerm = '';
+      }
+    }, 200);
+  }
+</script>
+
+<div class="relative">
+  {#if label}
+    <label for="roaster-search" class="block text-sm font-medium text-coffee-deep mb-1">
+      {label} {#if required}<span class="text-red-500">*</span>{/if}
+    </label>
+  {/if}
+  <div class="relative">
+    <input
+      type="text"
+      id="roaster-search"
+      bind:value={searchTerm}
+      bind:this={inputElement}
+      on:input={() => isOpen = true}
+      on:focus={handleFocus}
+      on:blur={handleBlur}
+      placeholder={placeholder}
+      class="w-full px-3 py-2 rounded-lg border border-coffee-light/20 
+             focus:outline-none focus:ring-2 focus:ring-coffee-cream"
+      {required}
+    />
+  </div>
+
+  {#if isOpen && filteredRoasters.length > 0}
+    <ul
+      class="absolute z-50 w-full mt-1 bg-white rounded-lg shadow-lg border border-coffee-light/20 
+             max-h-60 overflow-auto"
+    >
+      {#each filteredRoasters as option (option.id)}
+        <li>
+          <button
+            type="button"
+            class="w-full px-4 py-2 text-left hover:bg-coffee-cream/10 focus:bg-coffee-cream/10
+                   focus:outline-none transition-colors duration-150"
+            on:click={() => handleSelect(option)}
+          >
+            <div class="font-medium">{option.name}</div>
+            {#if option.location}
+              <div class="text-sm text-coffee-medium">{option.location}</div>
+            {/if}
+          </button>
+        </li>
+      {/each}
+    </ul>
+  {:else if isOpen && searchTerm}
+    <div class="absolute z-50 w-full mt-1 bg-white rounded-lg shadow-lg border border-coffee-light/20 p-4 text-center text-coffee-medium">
+      No roasters found
+    </div>
+  {/if}
+</div>
+
+================
+File: src/lib/server/api.ts
+================
+import { redirect } from '@sveltejs/kit';
+import type { Cookies } from '@sveltejs/kit';
+import { validateSession } from './auth';
+
+// API Error class for consistent error handling
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public data?: any
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+export class ApiClient {
+  private baseUrl = 'http://localhost:8000';
+  // private baseUrl = 'https://roastnotes.fly.dev';
+  private token: string;
+
+  constructor(token: string) {
+    this.token = token;
+  }
+
+  private async fetch<T>(
+    path: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const url = `${this.baseUrl}${path}`;
+    const headers = {
+      'Authorization': `Bearer ${this.token}`,
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = null;
+      }
+      
+      throw new ApiError(
+        errorData?.message || 'An error occurred',
+        response.status,
+        errorData
+      );
+    }
+
+    // Handle empty responses
+    if (response.status === 204) {
+      return null as T;
+    }
+
+    return await response.json();
+  }
+
+  async get<T>(path: string): Promise<T> {
+    return this.fetch<T>(path, { method: 'GET' });
+  }
+
+  async post<T>(path: string, data?: any): Promise<T> {
+    return this.fetch<T>(path, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async put<T>(path: string, data: any): Promise<T> {
+    return this.fetch<T>(path, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async delete<T>(path: string): Promise<T> {
+    return this.fetch<T>(path, { method: 'DELETE' });
+  }
+}
+
+// Helper to create an API client from cookies
+export async function createApiClient(cookies: Cookies): Promise<ApiClient> {
+  const token = cookies.get('roastnotes_token');
+  if (!token) {
+    throw redirect(303, '/auth/logout');
+  }
+  return new ApiClient(token);
+}
+
+================
+File: src/lib/server/auth.ts
+================
+import { redirect } from '@sveltejs/kit';
+import type { Cookies } from '@sveltejs/kit';
+import type { UserResponse } from '$lib/types';
+
+export type ValidSession = {
+  user: UserResponse | null;
+  token: string | null;
+};
+
+export async function validateSession(cookies: Cookies): Promise<ValidSession> {
+  const token = cookies.get('roastnotes_token');
+  if (!token) {
+    throw redirect(303, '/auth/logout');
+  }
+
+  const user_str = cookies.get('roastnotes_user');
+  if (!user_str) {
+    throw redirect(303, '/auth/logout');
+  }
+
+  try {
+    const user: UserResponse = JSON.parse(user_str);
+    return { user, token };
+  } catch (e) {
+    // If we can't parse the user data, clear cookies and redirect
+    cookies.delete('roastnotes_token', { path: '/' });
+    cookies.delete('roastnotes_user', { path: '/' });
+    throw redirect(303, '/auth/logout');
+  }
+}
+
+
+export async function checkSession(cookies: Cookies): Promise<ValidSession> {
+  const token = cookies.get('roastnotes_token');
+  if (!token) {
+    return { user: null, token: null };
+  }
+
+  const user_str = cookies.get('roastnotes_user');
+  if (!user_str) {
+    return { user: null, token: null };
+  }
+
+  try {
+    const user: UserResponse = JSON.parse(user_str);
+    return { user, token };
+  } catch (e) {
+    // If we can't parse the user, return null session
+    cookies.delete('roastnotes_token', { path: '/' });
+    cookies.delete('roastnotes_user', { path: '/' });
+    return { user: null, token: null };
+  }
+}
+
+================
+File: src/lib/stores/auth.ts
+================
+import { writable } from 'svelte/store';
+import type { UserResponse, AuthResponse } from '$lib/types';
+
+type AuthState = {
+  isLoggedIn: boolean;
+  user: UserResponse | null;
+  token: string | null;
+};
+
+function createAuthStore() {
+  const { subscribe, set, update } = writable<AuthState>({
+    isLoggedIn: false,
+    user: null,
+    token: null
+  });
+
+  return {
+    subscribe,
+    
+    // Initialize store with server-side data
+    init: (user: UserResponse | null, token: string | null) => {
+      set({
+        isLoggedIn: !!user && !!token,
+        user,
+        token
+      });
+    },
+
+    // Initialize with full auth response (for registration/login)
+    initWithAuth: (auth: AuthResponse) => {
+      set({
+        isLoggedIn: true,
+        user: auth.user,
+        token: auth.token.access_token
+      });
+    },
+
+    // Update user data only
+    updateUser: (user: UserResponse) => {
+      update(state => ({
+        ...state,
+        user
+      }));
+    },
+
+    // Clear auth state
+    logout: () => {
+      set({
+        isLoggedIn: false,
+        user: null,
+        token: null
+      });
+    }
+  };
+}
+
+export const auth = createAuthStore();
+
+================
+File: src/lib/index.ts
+================
+// place files you want to import through the `$lib` alias in this folder.
+
+================
+File: src/lib/types.ts
+================
+export enum RoastLevel {
+  unspecified = 'unspecified',
+  light = 'light',
+  medium = 'medium',
+  dark = 'dark'
+}
+
+export interface BeanDetails {
+  id: number;
+  roast_id: number;
+  species: string;
+  cultivar?: string;
+  processing_method?: string;
+  altitude?: number;
+  extra?: Record<string, any>;
+}
+
+export interface Roast {
+  id: number;
+  user_id: number;
+  roaster_id: number;
+  name: string;
+  origin: string;
+  single_origin: boolean;
+  roast_level: RoastLevel;
+  created_at: string;
+  bean_details: BeanDetails;
+  cached_rating_stats: {
+    avg_rating: number;
+    total_ratings: number;
+    brew_methods: {
+      [method: string]: {
+        count: number;
+        avg_rating: number;
+      }
+    };
+    // other cached stats...
+  }
+}
+
+export interface UserGroup {
+  id: number;
+  name: string;
+  description?: string;
+  member_count: number | null;
+  roast_count: number | null;
+}
+
+export interface GroupRoast {
+  id: number;
+  name: string;
+  origin: string;
+  single_origin: boolean;
+  roast_level: RoastLevel;
+  roaster: Roaster;
+  added_by_username: string;
+  added_at: string;
+  notes?: string;
+  group_rating?: number;
+  group_total_ratings?: number;
+  global_rating?: number;
+  global_total_ratings?: number;
+}
+
+export interface GroupRoastCollection {
+  group_name: string;
+  group_description?: string;
+  roasts: GroupRoast[];
+}
+
+export interface UserGroupRoastsResponse {
+  groups: Record<string, GroupRoastCollection>;
+}
+
+export interface Roaster {
+  id: number;
+  name: string;
+  location?: string;
+  website?: string;
+  description?: string;
+  social_media?: Record<string, string>;
+}
+
+export enum RoastsView {
+  Trending = 'trending', 
+  Groups = 'groups'
+}
+
+export interface Token {
+  access_token: string;
+  token_type: string;
+}
+
+export interface AuthResponse {
+  token: Token;
+  user: {
+    id: number;
+    username: string;
+    email: string;
+    created_at: string;
+  };
+}
+
+export interface RoastDetails {
+  id: number;
+  name: string;
+  origin: string;
+  single_origin: boolean;
+  roast_level: RoastLevel;
+  bean_details: BeanDetails;
+  created_at: string;
+  rating_stats: {
+    avg_rating: number;
+    total_ratings: number;
+    brew_methods: Record<string, { count: number; avg_rating: number }>;
+  };
+}
+
+export interface UserResponse {
+  id: number;
+  username: string;
+  email: string;
+  created_at: string;
+}
+
+export interface Rating {
+  id?: number;
+  roast_id: number;
+  user_id: number;
+  brew_method: string;
+  preferred_method: boolean;
+  ratio: string;           // water to coffee ratio
+  temperature: number;     // water temperature
+  grind: string;          // grind details
+  tasting_notes?: string;
+  overall_score: number;   // out of 100, will be converted to out of 5 for display
+  created_at?: string;
+  group_id?: number;      // optional, only present for group-specific ratings
+}
+
+// Helper function to convert rating score
+export function convertRatingToFiveScale(score: number): number {
+  return Math.round((score / 100) * 5 * 10) / 10; // Round to 1 decimal place
+}
+
+export function convertRatingToHundredScale(score: number): number {
+  return Math.round((score / 5) * 100);
+}
+
+================
+File: src/routes/auth/logout/+page.server.ts
+================
+import { redirect } from '@sveltejs/kit';
+import type { PageServerLoad, Actions } from './$types';
+
+// Redirect if someone tries to visit /auth/logout directly
+export const load: PageServerLoad = async ({cookies}) => {
+  cookies.delete('roastnotes_token', { path: '/' });
+  cookies.delete('roastnotes_user', { path: '/' });
+  throw redirect(303, '/');
+};
+
+export const actions = {
+  default: async ({ cookies }) => {
+    cookies.delete('roastnotes_token', { path: '/' });
+    cookies.delete('roastnotes_user', { path: '/' });
+    
+    throw redirect(303, '/');
+  }
+} satisfies Actions;
+
+================
+File: src/routes/auth/logout/+page.svelte
+================
+<script lang="ts">
+  import { onMount } from 'svelte';
+  
+  let message = 'Logging out...';
+  
+  onMount(() => {
+    const form = document.getElementById('logoutForm') as HTMLFormElement;
+    if (form) {
+      form.submit();
+    }
+  });
+</script>
+
+<div class="fixed inset-0 bg-coffee-deep/95 backdrop-blur-sm z-50 flex items-center justify-center">
+  <div class="text-center space-y-4">
+    <!-- Spinner -->
+    <div class="inline-block">
+      <div class="w-12 h-12 rounded-full border-4 border-coffee-cream/20 border-t-coffee-gold animate-spin"></div>
+    </div>
+    
+    <!-- Message -->
+    <p class="text-coffee-cream font-garamond text-xl">{message}</p>
+  </div>
+</div>
+
+<!-- Hidden form that will be auto-submitted -->
+<form 
+  id="logoutForm"
+  method="POST" 
+  class="hidden"
+>
+</form>
+
+================
+File: src/routes/login/+page.server.ts
+================
+import { fail, redirect } from '@sveltejs/kit';
+import type { Actions } from './$types';
+import type { AuthResponse } from '$lib/types';
+import { ApiClient, ApiError } from '$lib/server/api';
+
+export const actions: Actions = {
+  default: async ({ request, cookies }) => {
+    const data = await request.formData();
+    const email = data.get('email');
+    const password = data.get('password');
+
+    try {
+      const api = new ApiClient('');
+      
+      const auth_response: AuthResponse = await api.post('/users/login', {
+        email,
+        password
+      });
+      
+      cookies.set('roastnotes_token', auth_response.token.access_token, { path: '/' });
+      cookies.set('roastnotes_user', JSON.stringify(auth_response.user), { path: '/' });
+
+      throw redirect(303, '/roasts');
+      
+    } catch (error) {
+      if (error instanceof ApiError) {
+        return fail(error.status, {
+          invalid: true,
+          message: error.message
+        });
+      } else {
+        throw error;
+      }
+    }
+  }
+};
+
+================
+File: src/routes/login/+page.svelte
+================
+<script>
+  import { enhance } from '$app/forms';
+
+  let loading = false;
+
+  function handleSubmit() {
+    loading = true;
+    // Form submission is handled by the server
+  }
+</script>
+
+<div class="min-h-screen bg-coffee-cream bg-texture-paper py-16 px-4">
+  <div class="max-w-md mx-auto">
+    <!-- Header -->
+    <div class="text-center mb-12">
+      <h1 class="text-4xl font-garamond font-medium text-coffee-deep mb-4 text-shadow">
+        Welcome Back
+      </h1>
+      <p class="text-lg text-coffee-medium font-garamond italic">
+        il tuo tavolo ti aspetta
+      </p>
+    </div>
+
+    <!-- Login Form -->
+    <form 
+      method="POST" 
+      use:enhance={handleSubmit}
+      class="bg-white rounded-xl shadow-warm border border-coffee-light/20 p-8"
+    >
+      <div class="space-y-6">
+        <!-- Email -->
+        <div>
+          <label for="email" class="block font-garamond text-lg text-coffee-deep mb-2">
+            Email
+          </label>
+          <input
+            type="email"
+            name="email"
+            id="email"
+            required
+            class="input w-full"
+            placeholder="your@email.com"
+          />
+        </div>
+
+        <!-- Password -->
+        <div>
+          <label for="password" class="block font-garamond text-lg text-coffee-deep mb-2">
+            Password
+          </label>
+          <input
+            type="password"
+            name="password"
+            id="password"
+            required
+            class="input w-full"
+            placeholder="Enter your password"
+          />
+        </div>
+
+        <!-- Submit Button -->
+        <button
+          type="submit"
+          disabled={loading}
+          class="w-full px-8 py-3 rounded-lg bg-coffee-deep text-coffee-cream font-medium 
+                 shadow-md transition-all duration-300 ease-out transform 
+                 hover:scale-102 hover:shadow-lg hover:bg-coffee-medium
+                 border border-coffee-gold/20 text-lg
+                 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? 'Signing In...' : 'Sign In'}
+        </button>
+
+        <!-- Register Link -->
+        <div class="text-center mt-6">
+          <a 
+            href="/register"
+            class="text-coffee-medium hover:text-coffee-deep transition-colors duration-200"
+          >
+            Need an account? Join the table
+          </a>
+        </div>
+      </div>
+    </form>
+
+    <!-- Additional Info -->
+    <div class="mt-8 text-center text-coffee-medium text-sm">
+      <p>
+        Your coffee journey continues here
+      </p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .input {
+    @apply px-4 py-2 rounded-lg border border-coffee-light/30 
+           focus:border-coffee-gold/50 focus:ring-2 focus:ring-coffee-gold/20 
+           outline-none transition-all duration-200
+           placeholder:text-coffee-medium/50;
+  }
+
+  .text-shadow {
+    text-shadow: 1px 1px 2px rgba(120, 108, 59, 0.1);
+  }
+</style>
+
+================
+File: src/routes/profile/+page.server.ts
+================
+import type { PageServerLoad } from './$types';
+import { validateSession } from '$lib/server/auth';
+
+export const load: PageServerLoad = async ({ cookies }) => {
+  const { user, token } = await validateSession(cookies);
+  return { user, token };
+};
+
+================
+File: src/routes/profile/+page.svelte
+================
+<script lang="ts">
+  import { auth } from '$lib/stores/auth';
+  import type { PageData } from './$types';
+  
+  export let data: PageData;
+  
+  // Initialize auth store with server data
+  $: if (data.user && data.token) {
+    auth.init(data.user, data.token);
+  }
+</script>
+
+<div class="min-h-screen bg-coffee-paper/30">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    {#if $auth.user}
+      <div class="bg-white rounded-xl border border-coffee-light/20 shadow-warm overflow-hidden">
+        <div class="p-8">
+          <!-- Profile Header -->
+          <div class="flex items-center space-x-4 mb-6">
+            <div class="w-16 h-16 rounded-full bg-coffee-cream/20 border-2 border-coffee-gold/30 
+                        flex items-center justify-center">
+              <span class="font-garamond text-3xl text-coffee-deep">
+                {$auth.user.email[0].toUpperCase()}
+              </span>
+            </div>
+            <div>
+              <h1 class="font-garamond text-2xl text-coffee-deep">{$auth.user.email}</h1>
+              <p class="text-coffee-medium">Member since {new Date($auth.user.created_at).toLocaleDateString()}</p>
+            </div>
+          </div>
+
+          <!-- Stats -->
+          <div class="grid grid-cols-2 gap-4 mt-6">
+            <div class="p-4 rounded-lg bg-coffee-paper/30 border border-coffee-light/20">
+              <h3 class="font-garamond text-lg text-coffee-deep mb-1">Your Ratings</h3>
+              <p class="text-3xl font-garamond text-coffee-gold">0</p>
+              <p class="text-sm text-coffee-medium">across all roasts</p>
+            </div>
+            <div class="p-4 rounded-lg bg-coffee-paper/30 border border-coffee-light/20">
+              <h3 class="font-garamond text-lg text-coffee-deep mb-1">Groups</h3>
+              <p class="text-3xl font-garamond text-coffee-gold">0</p>
+              <p class="text-sm text-coffee-medium">coffee circles</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    {:else}
+      <div class="text-center">
+        <p class="text-coffee-medium">Loading profile...</p>
+      </div>
+    {/if}
+  </div>
+</div>
+
+<style>
+  .shadow-warm {
+    box-shadow: 0 4px 8px rgba(255, 215, 0, 0.2);
+  }
+</style>
+
+================
+File: src/routes/register/+page.server.ts
+================
+import { fail, redirect } from '@sveltejs/kit';
+import type { Actions } from './$types';
+import type { AuthResponse } from '$lib/types';
+import { ApiClient, ApiError } from '$lib/server/api';
+
+export const actions: Actions = {
+  default: async ({ request, cookies }) => {
+    const data = await request.formData();
+    const username = data.get('username');
+    const email = data.get('email');
+    const password = data.get('password');
+
+    try {
+      const api = new ApiClient('');
+      
+      const auth_response: AuthResponse = await api.post('/users/register', {
+        username,
+        email,
+        password
+      });
+      
+      cookies.set('roastnotes_token', auth_response.token.access_token, { path: '/' });
+      cookies.set('roastnotes_user', JSON.stringify(auth_response.user), { path: '/' });
+
+      console.log("Registered user: ", auth_response.user);
+
+      throw redirect(303, '/roasts');
+      
+    } catch (error) {
+      if (error instanceof ApiError) {
+        return fail(error.status, {
+          invalid: true,
+          message: error.message
+        });
+      } else {
+        throw error
+      }
+    }
+  }
+};
+
+================
+File: src/routes/register/+page.svelte
+================
+<script>
+  import { enhance } from '$app/forms';
+
+  let loading = false;
+  let password = '';
+  let confirmPassword = '';
+  let passwordsMatch = true;
+
+  $: passwordsMatch = !confirmPassword || password === confirmPassword;
+
+  function handleSubmit() {
+    loading = true;
+    // Form submission is handled by the server
+  }
+</script>
+
+<div class="min-h-screen bg-coffee-cream bg-texture-paper py-16 px-4">
+  <div class="max-w-md mx-auto">
+    <!-- Header -->
+    <div class="text-center mb-12">
+      <h1 class="text-4xl font-garamond font-medium text-coffee-deep mb-4 text-shadow">
+        Join the Table
+      </h1>
+      <p class="text-lg text-coffee-medium font-garamond italic">
+        Start your coffee journey with us
+      </p>
+    </div>
+
+    <!-- Registration Form -->
+    <form 
+      method="POST" 
+      use:enhance={handleSubmit}
+      class="bg-white rounded-xl shadow-warm border border-coffee-light/20 p-8"
+    >
+      <div class="space-y-6">
+        <!-- Username -->
+        <div>
+          <label for="username" class="block font-garamond text-lg text-coffee-deep mb-2">
+            Username
+          </label>
+          <input
+            type="text"
+            name="username"
+            id="username"
+            required
+            class="input w-full"
+            placeholder="Your preferred username"
+          />
+        </div>
+
+        <!-- Email -->
+        <div>
+          <label for="email" class="block font-garamond text-lg text-coffee-deep mb-2">
+            Email
+          </label>
+          <input
+            type="email"
+            name="email"
+            id="email"
+            required
+            class="input w-full"
+            placeholder="your@email.com"
+          />
+        </div>
+
+        <!-- Password -->
+        <div>
+          <label for="password" class="block font-garamond text-lg text-coffee-deep mb-2">
+            Password
+          </label>
+          <input
+            type="password"
+            name="password"
+            id="password"
+            required
+            bind:value={password}
+            class="input w-full"
+            placeholder="Choose a secure password"
+          />
+        </div>
+
+        <!-- Confirm Password -->
+        <div>
+          <label for="confirmPassword" class="block font-garamond text-lg text-coffee-deep mb-2">
+            Confirm Password
+          </label>
+          <input
+            type="password"
+            id="confirmPassword"
+            required
+            bind:value={confirmPassword}
+            class="input w-full"
+            class:border-coffee-burgundy={!passwordsMatch}
+            placeholder="Confirm your password"
+          />
+          {#if !passwordsMatch}
+            <p class="mt-2 text-sm text-coffee-burgundy">
+              Passwords don't match
+            </p>
+          {/if}
+        </div>
+
+        <!-- Submit Button -->
+        <button
+          type="submit"
+          disabled={loading || !passwordsMatch}
+          class="w-full px-8 py-3 rounded-lg bg-coffee-deep text-coffee-cream font-medium 
+                 shadow-md transition-all duration-300 ease-out transform 
+                 hover:scale-102 hover:shadow-lg hover:bg-coffee-medium
+                 border border-coffee-gold/20 text-lg
+                 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? 'Creating Account...' : 'Create Account'}
+        </button>
+
+        <!-- Sign In Link -->
+        <div class="text-center mt-6">
+          <a 
+            href="/login"
+            class="text-coffee-medium hover:text-coffee-deep transition-colors duration-200"
+          >
+            Already have an account? Sign in
+          </a>
+        </div>
+      </div>
+    </form>
+
+    <!-- Additional Info -->
+    <div class="mt-8 text-center text-coffee-medium text-sm">
+      <p>
+        By creating an account, you agree to share your coffee journey with fellow enthusiasts.
+      </p>
+    </div>
+  </div>
+</div>
+
+================
+File: src/routes/roasters/+page.server.ts
+================
+import type { PageServerLoad, Actions } from './$types';
+import { error, fail } from '@sveltejs/kit';
+import type { Roaster } from '$lib/types';
+
+export const load: PageServerLoad = async ({ cookies }) => {
+  const token = cookies.get('roastnotes_token');
+  const user_logged_in = !!token;
+
+  const headers = {
+    'Content-Type': 'application/json'
+  };
+
+  const res = await fetch('https://roastnotes.fly.dev/roasters/', {
+    method: 'GET',
+    headers
+  });
+
+  if (!res.ok) {
+    throw error(res.status, 'Failed to fetch roasters');
+  }
+
+  const roasters: Roaster[] = await res.json();
+  return { roasters };
+};
+
+export const actions: Actions = {
+  createRoaster: async ({ request, cookies }) => {
+    const token = cookies.get('roastnotes_token');
+    if (!token) {
+      throw error(401, 'Unauthorized');
+    }
+
+    const data = await request.formData();
+    const roasterData = {
+      name: data.get('name'),
+      location: data.get('location') || undefined,
+      website: data.get('website') || undefined,
+      description: data.get('description') || undefined
+    };
+
+    const res = await fetch('https://roastnotes.fly.dev/roasters/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(roasterData)
+    });
+
+    if (!res.ok) {
+      throw error(res.status, 'Failed to create roaster');
+    }
+
+    return { success: true };
+  },
+
+  searchRoasters: async ({ url, cookies }) => {
+    const token = cookies.get('roastnotes_token');
+    if (!token) {
+      return fail(401, { error: 'Unauthorized' });
+    }
+
+    const query = url.searchParams.get('q');
+    if (!query) {
+      return { roasters: [] };
+    }
+
+    const res = await fetch(`https://roastnotes.fly.dev/roasters/search?q=${encodeURIComponent(query)}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!res.ok) {
+      return fail(res.status, { error: 'Failed to search roasters' });
+    }
+
+    const roasters = await res.json();
+    return { roasters };
+  }
+};
+
+================
+File: src/routes/roasters/+page.svelte
+================
+<script lang="ts">
+  import type { PageData } from './$types';
+  import AddRoasterModal from '$lib/components/AddRoasterModal.svelte';
+  import { page } from '$app/stores';
+  import { invalidateAll } from '$app/navigation';
+
+  export let data: PageData;
+
+  let searchInput = '';
+  let showAddRoasterModal = false;
+
+  $: roasters = data.roasters.filter(roaster => {
+    if (!searchInput) return true;
+    const search = searchInput.toLowerCase();
+    return (
+      roaster.name.toLowerCase().includes(search) ||
+      (roaster.location?.toLowerCase().includes(search)) ||
+      (roaster.description?.toLowerCase().includes(search))
+    );
+  });
+
+  $: isLoggedIn = !!$page.data.user;
+
+  async function handleRoasterAdded() {
+    await invalidateAll();
+  }
+</script>
+
+<div class="min-h-screen bg-coffee-paper/30">
+  <!-- Top Bar -->
+  <div class="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-coffee-light/20 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div class="flex justify-between items-center gap-4">
+        <!-- Search Bar -->
+        <div class="flex-1 max-w-2xl">
+          <div class="relative">
+            <input
+              type="text"
+              bind:value={searchInput}
+              placeholder=" Search roasters..."
+              class="w-full pl-14 pr-4 py-2 rounded-lg border border-coffee-light/20 
+                     focus:outline-none focus:ring-2 focus:ring-coffee-cream"
+            />
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <svg class="h-5 w-5 text-coffee-medium" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            {#if searchInput}
+              <button
+                class="absolute inset-y-0 right-0 pr-3 flex items-center text-coffee-medium hover:text-coffee-deep"
+                onclick={() => searchInput = ''}
+              >
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                </svg>
+              </button>
+            {/if}
+          </div>
+        </div>
+
+        <!-- Add New Button -->
+        {#if isLoggedIn}
+          <button
+            onclick={() => showAddRoasterModal = true}
+            class="px-3 py-1.5 bg-coffee-deep text-coffee-cream rounded-lg
+                   hover:bg-coffee-medium transition-colors duration-200
+                   flex items-center gap-1.5 text-sm"
+          >
+            <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+            </svg>
+            Add Roaster
+          </button>
+        {/if}
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    {#if roasters.length === 0}
+      <div class="text-center py-12">
+        {#if searchInput}
+          <p class="text-coffee-medium">No roasters found matching "{searchInput}"</p>
+        {:else}
+          <p class="text-coffee-medium">No roasters added yet. {#if isLoggedIn}Add your first roaster!{/if}</p>
+        {/if}
+      </div>
+    {:else}
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {#each roasters as roaster (roaster.id)}
+          <div class="bg-white rounded-lg shadow-warm border border-coffee-light/10 p-6 hover:border-coffee-light/30 transition-colors duration-200">
+            <h3 class="text-xl font-medium text-coffee-deep mb-2">{roaster.name}</h3>
+            {#if roaster.location}
+              <p class="text-coffee-medium text-sm mb-3">{roaster.location}</p>
+            {/if}
+            {#if roaster.description}
+              <p class="text-coffee-medium/80 text-sm mb-4">{roaster.description}</p>
+            {/if}
+            {#if roaster.website}
+              <a 
+                href={roaster.website} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                class="inline-flex items-center text-sm text-coffee-medium hover:text-coffee-deep transition-colors duration-200"
+              >
+                <svg class="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M4.083 9h1.946c.089-1.546.383-2.97.837-4.118A6.004 6.004 0 004.083 9zM10 2a8 8 0 100 16 8 8 0 000-16zm0 2c-.076 0-.232.032-.465.262-.238.234-.497.623-.737 1.182-.389.907-.673 2.142-.766 3.556h3.936c-.093-1.414-.377-2.649-.766-3.556-.24-.56-.5-.948-.737-1.182C10.232 4.032 10.076 4 10 4zm3.971 5c-.089-1.546-.383-2.97-.837-4.118A6.004 6.004 0 0115.917 9h-1.946zm-2.003 2H8.032c.093 1.414.377 2.649.766 3.556.24.56.5.948.737 1.182.233.23.389.262.465.262.076 0 .232-.032.465-.262.238-.234.498-.623.737-1.182.389-.907.673-2.142.766-3.556zm1.166 4.118c.454-1.147.748-2.572.837-4.118h1.946a6.004 6.004 0 01-2.783 4.118zm-6.268 0C6.412 13.97 6.118 12.546 6.03 11H4.083a6.004 6.004 0 002.783 4.118z" clip-rule="evenodd" />
+                </svg>
+                Visit Website
+              </a>
+            {/if}
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </div>
+</div>
+
+<AddRoasterModal
+  bind:show={showAddRoasterModal}
+  onClose={() => showAddRoasterModal = false}
+  onRoasterAdded={handleRoasterAdded}
+/>
+
+================
+File: src/routes/roasts/+page.server.ts
+================
+import type { PageServerLoad, Actions } from './$types';
+import { error, fail, redirect } from '@sveltejs/kit';
+import type { AuthResponse } from '$lib/types';
+import { ApiClient, ApiError } from '$lib/server/api';
+import { checkSession } from '$lib/server/auth';
+import type { Roast, UserResponse, GroupRoast, UserGroup, UserGroupRoastsResponse, GroupRoastCollection, Roaster } from '$lib/types';
+
+export const load: PageServerLoad = async ({ cookies }) => {
+  const { user, token } = await checkSession(cookies);
+  const user_logged_in = !!token;
+
+  const api = new ApiClient(token ?? '');
+
+  try {
+    // Fetch trending roasts and roasters in parallel
+    const [roasts, roasters] = await Promise.all([
+      api.get<Roast[]>('/roasts/'),
+      api.get<Roaster[]>('/roasters/')
+    ]);
+
+    let group_roasts: GroupRoast[] = [];
+    let user_groups: UserGroup[] = [];
+    let groups: {[key: string]: GroupRoastCollection} = {};
+
+    if (user_logged_in && user) {
+
+      const [user_groups, user_groups_roasts_response] = await Promise.all([
+        api.get<UserGroup[]>(`/groups/user/${user.id}`),
+        api.get<UserGroupRoastsResponse>(`/groups/user/${user.id}/roasts`)
+      ]);
+      groups = user_groups_roasts_response.groups;
+      group_roasts = Object.values(groups).flatMap(group => group.roasts);
+    }
+
+    return {
+      roasts: roasts.map((roast: Roast) => ({
+        id: roast.id,
+        user_id: roast.user_id,
+        roaster_id: roast.roaster_id,
+        name: roast.name,
+        origin: roast.origin,
+        single_origin: roast.single_origin,
+        roast_level: roast.roast_level,
+        created_at: roast.created_at,
+        bean_details: roast.bean_details,
+        cached_rating_stats: roast.cached_rating_stats
+      })),
+      group_roasts,
+      groups,
+      user_groups,
+      roasters,
+      user_logged_in
+    };
+  } catch (err) {
+    console.log("Got error", err)
+    if (err instanceof ApiError) {
+      if (err.status === 401) {
+        console.log("lower redirect to /auth/logout")
+        throw redirect(303, '/auth/logout');
+      }
+      throw error(err.status, err.message);
+    }
+    throw error(500, `Failed to load roasts data ${err}`);
+  }
+};
+
+export const actions: Actions = {
+  createRoast: async ({ request, cookies }) => {
+    const token = cookies.get('roastnotes_token');
+    if (!token) {
+      throw error(401, 'Unauthorized');
+    }
+
+    const data = await request.formData();
+    const roastData = {
+      name: data.get('name'),
+      origin: data.get('origin'),
+      single_origin: data.get('single_origin') === 'true',
+      roast_level: data.get('roast_level'),
+      bean_details: {
+        species: data.get('species'),
+        cultivar: data.get('cultivar') || undefined,
+        processing_method: data.get('processing_method') || undefined,
+        altitude: data.get('altitude') ? Number(data.get('altitude')) : undefined
+      },
+      roaster_id: Number(data.get('roaster_id'))
+    };
+
+    const res = await fetch('https://roastnotes.fly.dev/roasts/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(roastData)
+    });
+
+    if (!res.ok) {
+      return fail(res.status, { error: 'Failed to create roast' });
+    }
+
+    return { success: true };
+  },
+  submitRating: async ({ request, cookies }) => {
+    try {
+      const data = await request.formData();
+      const roastId = data.get('roast_id');
+      const rating = data.get('rating');
+      const brewMethod = data.get('brew_method');
+      const notes = data.get('notes');
+
+      if (!roastId || !rating || !brewMethod) {
+        return { type: 'error', error: { message: 'Missing required fields' } };
+      }
+
+      const token = cookies.get('roastnotes_token');
+      if (!token) {
+        return { type: 'error', error: { message: 'Not authenticated' } };
+      }
+
+      const response = await fetch(`https://roastnotes.fly.dev/roasts/${roastId}/ratings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          rating: Number(rating),
+          brew_method: brewMethod,
+          notes: notes || undefined
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        return { type: 'error', error };
+      }
+
+      return { type: 'success' };
+    } catch (error) {
+      console.error('Error submitting rating:', error);
+      return { 
+        type: 'error', 
+        error: { message: 'Failed to submit rating. Please try again.' }
+      };
+    }
+  },
+  getUserRatings: async ({ request, cookies }) => {
+    const token = cookies.get('roastnotes_token');
+    if (!token) {
+      return fail(401, { message: 'Not authenticated' });
+    }
+
+    const data = await request.formData();
+    const roastId = data.get('roastId');
+    if (!roastId) {
+      return fail(400, { message: 'Roast ID is required' });
+    }
+
+    const user_str = cookies.get('roastnotes_user');
+    if (!user_str) {
+      return fail(401, { message: 'User info not found' });
+    }
+    const user: UserResponse = JSON.parse(user_str);
+
+    const res = await fetch(`https://roastnotes.fly.dev/ratings/roast/${roastId}?user_id=${user.id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!res.ok) {
+      return fail(res.status, { message: 'Failed to fetch user ratings' });
+    }
+
+    const ratings = await res.json();
+    return { success: true, ratings };
+  }
+};
+
+================
+File: src/routes/roasts/+page.svelte
+================
+<script lang="ts">
+  import type { PageProps } from './$types';
+  import { invalidateAll } from '$app/navigation';
+  import RoastCard from '$lib/components/RoastCard.svelte';
+  import GroupRoastCard from '$lib/components/GroupRoastCard.svelte';
+  import type { Roast, UserGroup, GroupRoast, RoastDetails } from '$lib/types';
+  import { RoastsView } from '$lib/types';
+  import AddRoastModal from '$lib/components/AddRoastModal.svelte';
+  import { goto } from '$app/navigation';
+
+  let { data }: PageProps = $props();
+  let roasts: Roast[] = data.roasts;
+  let user_groups: UserGroup[] = data.user_groups;
+  let group_roasts: GroupRoast[] = data.group_roasts;
+  let groups = data.groups;
+  const user_logged_in = data.user_logged_in;
+  let selectedView: RoastsView = $state(RoastsView.Trending);
+  let displayedRoasts: (Roast | GroupRoast)[] = $state(roasts);
+  let selectedGroupId: number | null = $state(null);
+  let showAddRoastModal = $state(false);
+
+  $effect(() => {
+    displayedRoasts = selectedView === RoastsView.Trending ? roasts : group_roasts;
+  });
+
+  function showTrendingView() {
+    selectedView = RoastsView.Trending;
+    selectedGroupId = null;
+  }
+
+  function showGroupsView() {
+    selectedView = RoastsView.Groups;
+    selectedGroupId = null;
+  }
+
+  function selectGroup(groupId: number) {
+    selectedGroupId = groupId;
+    displayedRoasts = group_roasts.filter((roast) => roast.id === groupId);
+  }
+
+  function showAllGroups() {
+    selectedGroupId = null;
+    displayedRoasts = group_roasts;
+  }
+
+  function isGroupRoast(roast: Roast | GroupRoast): roast is GroupRoast {
+    return 'group_id' in roast && 'added_by_username' in roast;
+  }
+
+  function isRoast(roast: Roast | GroupRoast): roast is Roast {
+    return !('group_id' in roast) || !('added_by_username' in roast);
+  }
+
+  function handleAddRoast() {
+    showAddRoastModal = true;
+  }
+
+  function handleRoastClick(roast: Roast | GroupRoast) {
+    const roastId = roast.id;
+    goto(`/roasts/${roastId}`);
+  }
+
+</script>
+
+<div class="min-h-screen bg-coffee-paper/30">
+  <!-- Top Actions Bar -->
+  <div class="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-coffee-light/20 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+          <div class="flex items-center p-1.5 bg-coffee-cream/20 rounded-lg border border-coffee-light/20">
+            <button 
+              class="px-4 py-1.5 mx-0.5 rounded-md font-medium transition-all duration-200
+                     {selectedView === RoastsView.Trending ? 
+                       'bg-white text-coffee-deep shadow-warm translate-y-[-1px] active:translate-y-0' : 
+                       'text-coffee-medium hover:text-coffee-deep'}"
+              onclick={showTrendingView}
+            >
+              Trending
+            </button>
+            {#if user_logged_in}
+              <button 
+                class="px-4 py-1.5 mx-0.5 rounded-md font-medium transition-all duration-200
+                       {selectedView === RoastsView.Groups ? 
+                         'bg-white text-coffee-deep shadow-warm translate-y-[-1px] active:translate-y-0' : 
+                         'text-coffee-medium hover:text-coffee-deep'}"
+                onclick={showGroupsView}
+              >
+                Groups
+              </button>
+            {/if}
+          </div>
+        </div>
+        
+        <div class="flex items-center space-x-2">
+          {#if user_logged_in}
+            <button 
+              class="px-3 py-1.5 bg-coffee-deep text-coffee-cream rounded-lg
+                     hover:bg-coffee-medium transition-colors duration-200
+                     flex items-center gap-1.5 text-sm"
+              onclick={handleAddRoast}
+            >
+              <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+              </svg>
+              Add Roast
+            </button>
+            <select 
+              class="px-3 py-2 rounded-lg border border-coffee-light/20 
+                     text-coffee-deep bg-white"
+            >
+              <option>Most Recent</option>
+              <option>Highest Rated</option>
+              <option>Most Reviews</option>
+            </select>
+          {/if}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="flex gap-8">
+      {#if selectedView === RoastsView.Groups && user_logged_in}
+        <!-- Groups Sidebar -->
+        <div class="w-64 shrink-0">
+          <div class="bg-white rounded-xl border border-coffee-light/20 p-4 shadow-warm">
+            <h3 class="font-garamond text-xl text-coffee-deep mb-4">Your Groups</h3>
+            <div class="space-y-2">
+              <button
+                class="w-full px-3 py-2 text-left rounded-lg transition-colors duration-200
+                       {selectedGroupId === null ? 
+                         'bg-coffee-cream/20 text-coffee-deep' : 
+                         'text-coffee-medium hover:bg-coffee-cream/10'}"
+                onclick={showAllGroups}
+              >
+                All Groups ({user_groups.length})
+              </button>
+              {#each user_groups as group}
+                <button
+                  class="w-full px-3 py-2 text-left rounded-lg transition-colors duration-200
+                         {selectedGroupId === group.id ? 
+                           'bg-coffee-cream/20 text-coffee-deep' : 
+                           'text-coffee-medium hover:bg-coffee-cream/10'}"
+                  onclick={() => selectGroup(group.id)}
+                >
+                  <div class="font-medium">{group.name}</div>
+                  <div class="text-sm text-coffee-medium">
+                    {group.roast_count} roasts · {group.member_count} members
+                  </div>
+                </button>
+              {/each}
+            </div>
+          </div>
+        </div>
+      {/if}
+
+      <!-- Roasts Grid -->
+      <div class="flex-1">
+        <div class="bg-white rounded-xl border border-coffee-light/20 p-6 shadow-warm">
+          <!-- Section Title -->
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="font-garamond text-2xl text-coffee-deep">
+              {#if selectedView === RoastsView.Groups}
+                {#if selectedGroupId}
+                  {groups[selectedGroupId].group_name}
+                {:else}
+                  All Group Roasts
+                {/if}
+              {:else}
+                Trending Roasts
+              {/if}
+            </h2>
+            {#if selectedView === RoastsView.Groups && selectedGroupId}
+              <p class="text-coffee-medium">
+                {data.groups[selectedGroupId].group_description}
+              </p>
+            {/if}
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {#each displayedRoasts as roast (roast.id)}
+              <div 
+                class="cursor-pointer"
+                onclick={() => handleRoastClick(roast)}
+              >
+                {#if isGroupRoast(roast)}
+                  <GroupRoastCard {roast} />
+                {:else if isRoast(roast)}
+                  <RoastCard {roast} />
+                {/if}
+              </div>
+            {/each}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<AddRoastModal
+  bind:show={showAddRoastModal}
+  userGroups={data.user_groups}
+  roasters={data.roasters}
+  selectedGroupId={selectedGroupId}
+  onClose={() => {
+    showAddRoastModal = false;
+  }}
+  onRoastAdded={() => {
+    invalidateAll();
+  }}
+/>
+
+<style>
+  /* Add any additional styles here */
+  :global(.shadow-warm) {
+    box-shadow: 0 4px 6px -1px rgba(120, 108, 59, 0.1), 
+                0 2px 4px -1px rgba(120, 108, 59, 0.06);
+  }
+</style>
+
+================
+File: src/routes/texture-test/+page.svelte
+================
+<script>
+  // Texture comparison page
+</script>
+
+<div class="min-h-screen">
+  <!-- Current Noise Texture -->
+  <div class="h-[33vh] bg-coffee-cream bg-texture p-8">
+    <div class="bg-white/80 backdrop-blur-sm p-4 rounded-lg inline-block">
+      <h2 class="text-xl font-garamond text-coffee-deep mb-2">1. Current Noise Texture</h2>
+      <p class="text-coffee-medium">Subtle noise pattern using SVG feTurbulence</p>
+    </div>
+  </div>
+
+  <!-- Coffee Dots Pattern -->
+  <div class="h-[33vh] bg-coffee-cream coffee-dots p-8">
+    <div class="bg-white/80 backdrop-blur-sm p-4 rounded-lg inline-block">
+      <h2 class="text-xl font-garamond text-coffee-deep mb-2">2. Coffee Dots Pattern</h2>
+      <p class="text-coffee-medium">Organic dot pattern in coffee colors</p>
+    </div>
+  </div>
+
+  <!-- New Italian Paper Texture -->
+  <div class="h-[33vh] bg-coffee-cream italian-paper p-8">
+    <div class="bg-white/80 backdrop-blur-sm p-4 rounded-lg inline-block">
+      <h2 class="text-xl font-garamond text-coffee-deep mb-2">3. Italian Paper Texture</h2>
+      <p class="text-coffee-medium">Handmade paper texture with subtle grain</p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .coffee-dots {
+    background-color: #f8f4e9;
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23786c3b' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+  }
+
+  .italian-paper {
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='paper'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.4' numOctaves='3' seed='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0.3 0 0 0 0 0 0.3 0 0 0 0 0 0.3 0 0 0 0 0 0.15 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23paper)'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+  }
+</style>
+
+================
+File: src/routes/+layout.server.ts
+================
+import type { LayoutServerLoad } from './$types';
+import type { UserResponse } from '$lib/types';
+
+export const load: LayoutServerLoad = async ({ cookies }) => {
+  const token: string | null = cookies.get('roastnotes_token') ?? null;
+  const user_logged_in = !!token;
+  
+  let user: UserResponse | null = null;
+  if (user_logged_in) {
+    const user_str = cookies.get('roastnotes_user');
+    if (user_str) {
+      user = JSON.parse(user_str);
+    }
+  }
+
+  return {
+    user_logged_in,
+    user,
+    token
+  };
+};
+
+================
+File: src/routes/+layout.svelte
+================
+<script lang="ts">
+  import '../app.css';
+  import Header from '$lib/components/Header.svelte';
+  import { auth } from '$lib/stores/auth';
+  import type { LayoutData } from './$types';
+
+  let { data }: { data: LayoutData } = $props();
+
+  // Initialize auth store whenever layout data changes
+  $effect(() => {
+    auth.init(data.user, data.token);
+  });
+</script>
+  
+<div class="min-h-screen bg-coffee-cream bg-texture-paper">
+  <Header {data} />
+  
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <slot />
+  </main>
+</div>
+  
+<style>
+:root {
+  --bg-color: #f4ece3;         /* parchment-like background */
+  --primary-color: #8a4b28;    /* rich mahogany */
+  --secondary-color: #6c4f3d;  /* deep leather brown */
+  --accent-color: #a05a35;     /* warm accent */
+  --text-color: #5a3e2b;       /* dark, bookish text */
+  --font-serif: 'Garamond', serif;
+  --font-sans: 'Helvetica Neue', sans-serif;
+}
+
+body {
+  background-color: var(--bg-color);
+  font-family: var(--font-sans);
+  color: var(--text-color);
+  margin: 0;
+  padding: 0;
+}
+</style>
+
+================
+File: src/routes/+page.server.ts
+================
+import { redirect } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
+
+export const load: PageServerLoad = async ({ cookies }) => {
+    const token = cookies.get('roastnotes_token');
+    if (token) {
+        console.log("Redirecting from home to roasts")
+        throw redirect(303, '/roasts');
+    }
+    return {};
+};
+
+================
+File: src/routes/+page.svelte
+================
+<script lang="ts">
+  import type { PageData } from './$types';
+  import LandingOverview from '$lib/components/LandingOverview.svelte';
+
+  export let data: PageData;
+</script>
+
+<div class="min-h-screen bg-coffee-cream bg-texture">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="text-center mb-6">
+        <h1 class="text-5xl font-garamond font-medium text-coffee-deep mb-2">
+          Welcome to RoastNotes
+        </h1>
+        <p class="text-xl text-coffee-medium font-garamond italic">
+          il gusto del caffè
+        </p>
+      </div>
+      
+      <LandingOverview />
+      
+      <div class="flex flex-col items-center mt-10 mb-12 space-y-5">
+        <a 
+          href="/register"
+          class="px-8 py-3 rounded-full bg-coffee-deep text-coffee-cream font-medium 
+                 shadow-md transition-all duration-300 ease-out transform 
+                 hover:scale-102 hover:shadow-lg hover:bg-coffee-medium
+                 border border-coffee-gold/20 text-lg"
+        >
+          Join the Table
+        </a>
+        <div class="flex items-center space-x-2 text-coffee-medium">
+          <span>Already have an account?</span>
+          <a 
+            href="/login"
+            class="font-medium text-coffee-deep hover:text-coffee-burgundy 
+                   transition-colors duration-200 underline"
+          >
+            Sign In
+          </a>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<style>
+  .bg-texture {
+    /* background-image: url('/coffee-texture-light.png'); */
+    background-repeat: repeat;
+    background-size: 300px 300px;
+    background-blend-mode: multiply;
+  }
+
+  :global(.hover\:scale-102:hover) {
+    transform: scale(1.02);
+  }
+</style>
+
+================
+File: src/app.css
+================
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Inter:wght@300;400;500;600&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap');
+
+@layer base {
+  body {
+    @apply bg-[#F8F4E9] text-[#2D2D2D] font-inter;
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='paper'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.4' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23paper)' opacity='0.12'/%3E%3C/svg%3E");
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-garamond text-[#2C1810];
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-300 ease-out;
+    @apply transform hover:scale-102 hover:shadow-warm-lg;
+    @apply focus:outline-none focus:ring-2 focus:ring-[#D4A24C]/50;
+  }
+
+  .btn-primary {
+    @apply bg-[#2C1810] text-[#F5E6D3] shadow-warm;
+    @apply hover:bg-[#4A3428];
+    @apply border border-[#D4A24C]/20;
+  }
+
+  .btn-secondary {
+    @apply bg-[#F8F4E9] text-[#2C1810] shadow-warm;
+    @apply hover:bg-[#F5E6D3] hover:text-[#2C1810];
+    @apply border border-[#8B6F5C]/20;
+  }
+
+  .card {
+    @apply bg-white rounded-xl p-6 shadow-warm;
+    @apply transition-all duration-300 ease-out;
+    @apply hover:shadow-warm-lg hover:scale-101;
+    @apply border border-[#8B6F5C]/10;
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='parchment'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23parchment)' opacity='0.08'/%3E%3C/svg%3E");
+  }
+
+  .input {
+    @apply px-4 py-2 rounded-lg border border-[#8B6F5C]/30;
+    @apply bg-[#F8F4E9]/80 backdrop-blur-sm;
+    @apply focus:outline-none focus:ring-2 focus:ring-[#D4A24C]/50;
+    @apply transition-all duration-200 ease-out;
+    @apply placeholder-[#8B6F5C]/50;
+  }
+
+  .roast-card {
+    @apply card;
+    @apply border-l-4 border-l-[#D4A24C];
+  }
+
+  .rating-card {
+    @apply card;
+    @apply bg-[#F8F4E9]/90;
+  }
+}
+
+@layer utilities {
+  .shadow-glow {
+    box-shadow: 0 0 20px rgba(212, 162, 76, 0.15);
+  }
+
+  .text-shadow {
+    text-shadow: 1px 1px 2px rgba(44, 24, 16, 0.1);
+  }
+}
+
+================
+File: src/app.d.ts
+================
+// See https://svelte.dev/docs/kit/types#app.d.ts
+// for information about these interfaces
+declare global {
+	namespace App {
+		// interface Error {}
+		// interface Locals {}
+		// interface PageData {}
+		// interface PageState {}
+		// interface Platform {}
+	}
+}
+
+export {};
+
+================
+File: src/app.html
+================
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>
+
+================
+File: .gitignore
+================
+node_modules
+
+# Output
+.output
+.vercel
+.netlify
+.wrangler
+/.svelte-kit
+/build
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+!.env.example
+!.env.test
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+================
+File: .npmrc
+================
+engine-strict=true
+
+================
+File: .prettierignore
+================
+# Package Managers
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+================
+File: .prettierrc
+================
+{
+	"useTabs": true,
+	"singleQuote": true,
+	"trailingComma": "none",
+	"printWidth": 100,
+	"plugins": ["prettier-plugin-svelte", "prettier-plugin-tailwindcss"],
+	"overrides": [
+		{
+			"files": "*.svelte",
+			"options": {
+				"parser": "svelte"
+			}
+		}
+	]
+}
+
+================
+File: eslint.config.js
+================
+import prettier from 'eslint-config-prettier';
+import js from '@eslint/js';
+import { includeIgnoreFile } from '@eslint/compat';
+import svelte from 'eslint-plugin-svelte';
+import globals from 'globals';
+import { fileURLToPath } from 'node:url';
+import ts from 'typescript-eslint';
+const gitignorePath = fileURLToPath(new URL('./.gitignore', import.meta.url));
+
+export default ts.config(
+	includeIgnoreFile(gitignorePath),
+	js.configs.recommended,
+	...ts.configs.recommended,
+	...svelte.configs['flat/recommended'],
+	prettier,
+	...svelte.configs['flat/prettier'],
+	{
+		languageOptions: {
+			globals: {
+				...globals.browser,
+				...globals.node
+			}
+		}
+	},
+	{
+		files: ['**/*.svelte'],
+
+		languageOptions: {
+			parserOptions: {
+				parser: ts.parser
+			}
+		}
+	}
+);
+
+================
+File: package.json
+================
+{
+	"name": "roastnotes",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"prepare": "svelte-kit sync || echo ''",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"format": "prettier --write .",
+		"lint": "prettier --check . && eslint ."
+	},
+	"devDependencies": {
+		"@eslint/compat": "^1.2.5",
+		"@eslint/js": "^9.18.0",
+		"@sveltejs/adapter-auto": "^4.0.0",
+		"@sveltejs/kit": "^2.16.0",
+		"@sveltejs/vite-plugin-svelte": "^5.0.0",
+		"autoprefixer": "^10.4.20",
+		"eslint": "^9.18.0",
+		"eslint-config-prettier": "^10.0.1",
+		"eslint-plugin-svelte": "^2.46.1",
+		"globals": "^15.14.0",
+		"prettier": "^3.4.2",
+		"prettier-plugin-svelte": "^3.3.3",
+		"prettier-plugin-tailwindcss": "^0.6.10",
+		"svelte": "^5.0.0",
+		"svelte-check": "^4.0.0",
+		"tailwindcss": "^3.4.17",
+		"typescript": "^5.0.0",
+		"typescript-eslint": "^8.20.0",
+		"vite": "^6.0.0"
+	}
+}
+
+================
+File: postcss.config.js
+================
+export default {
+	plugins: {
+		tailwindcss: {},
+		autoprefixer: {}
+	}
+};
+
+================
+File: README.md
+================
+# RoastNotes Frontend
+
+## Current Todo
+
+- Fix handling of session expiration and redirect back to login or homepage
+- Logging in with incorrect credentials is not handled correctly
+- Fix auth generally. 
+- Fix roast card to properly show ratings information
+- Fix roast details page -> show details for selected roast, including any group ratings and user ratings
+- Add ability to rate a roast
+    - Add Roast modal from roast details page
+- Ability to create a new group
+- Group details page -> more of a homepage for the group
+- Ability to add roasters to a group
+- Ability to remove roasters from a group
+- Aggregate roaster data for a group
+- Profile page
+    - Roasts, Groups, and profile data is displayed
+    - Ability to update profile information -> random profile pic generator
+
+
+## Finished
+
+- Pass roasters to Add Roast modal for search
+- Fix header for correct information when logged in vs logged out
+
+================
+File: svelte.config.js
+================
+import adapter from '@sveltejs/adapter-auto';
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
+
+/** @type {import('@sveltejs/kit').Config} */
+const config = {
+	// Consult https://svelte.dev/docs/kit/integrations
+	// for more information about preprocessors
+	preprocess: vitePreprocess(),
+
+	kit: {
+		// adapter-auto only supports some environments, see https://svelte.dev/docs/kit/adapter-auto for a list.
+		// If your environment is not supported, or you settled on a specific environment, switch out the adapter.
+		// See https://svelte.dev/docs/kit/adapters for more information about adapters.
+		adapter: adapter()
+	}
+};
+
+export default config;
+
+================
+File: tailwind.config.ts
+================
+import type { Config } from 'tailwindcss';
+
+export default {
+  content: ['./src/**/*.{html,js,svelte,ts}'],
+  theme: {
+    extend: {
+      colors: {
+        'coffee': {
+          'deep': '#2C1810',      // Deep espresso
+          'medium': '#4A3428',    // Roasted bean
+          'light': '#8B6F5C',     // Aged wood
+          'cream': '#F5E6D3',     // Steamed milk
+          'gold': '#D4A24C',      // Brass/copper
+          'burgundy': '#732F2F',  // Terra cotta
+          'olive': '#4B4A3A',     // Aged leather
+          'charcoal': '#2D2D2D',  // Blackboard
+          'paper': '#F8F4E9'      // Aged paper
+        }
+      },
+      fontFamily: {
+        garamond: ['EB Garamond', 'serif'],
+        inter: ['Inter', 'sans-serif'],
+        crimson: ['Crimson Pro', 'serif']
+      },
+      scale: {
+        '101': '1.01',
+        '102': '1.02'
+      },
+      transitionTimingFunction: {
+        'bounce-sm': 'cubic-bezier(0.175, 0.885, 0.32, 1.05)'
+      },
+      keyframes: {
+        'warm-fade-in': {
+          '0%': { opacity: '0', transform: 'scale(0.95)' },
+          '100%': { opacity: '1', transform: 'scale(1)' }
+        }
+      },
+      animation: {
+        'warm-fade-in': 'warm-fade-in 0.3s ease-out'
+      },
+      boxShadow: {
+        'warm': '0 4px 14px -2px rgba(44, 24, 16, 0.08)',
+        'warm-lg': '0 10px 24px -4px rgba(44, 24, 16, 0.12)'
+      },
+      backgroundImage: {
+        'texture': "url(\"data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E\")",
+        'texture-dots': "url(\"data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23786c3b' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E\")",
+        'texture-paper': "url(\"data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='paper'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.4' numOctaves='3' seed='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0.3 0 0 0 0 0 0.3 0 0 0 0 0 0.3 0 0 0 0 0 0.15 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23paper)'/%3E%3C/svg%3E\")",
+      },
+      plugins: []
+    }
+  },
+  plugins: []
+} satisfies Config;
+
+================
+File: tsconfig.json
+================
+{
+	"extends": "./.svelte-kit/tsconfig.json",
+	"compilerOptions": {
+		"allowJs": true,
+		"checkJs": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"resolveJsonModule": true,
+		"skipLibCheck": true,
+		"sourceMap": true,
+		"strict": true,
+		"moduleResolution": "bundler"
+	}
+	// Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
+	// except $lib which is handled by https://svelte.dev/docs/kit/configuration#files
+	//
+	// If you want to overwrite includes/excludes, make sure to copy over the relevant includes/excludes
+	// from the referenced tsconfig.json - TypeScript does not merge them in
+}
+
+================
+File: vite.config.ts
+================
+import { sveltekit } from '@sveltejs/kit/vite';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+	plugins: [sveltekit()]
+});
+
+
+
+================================================================
+End of Codebase
+================================================================

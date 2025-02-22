@@ -1,19 +1,15 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-  import Modal from './Modal.svelte';
   import type { Rating } from '$lib/types';
   import { convertRatingToFiveScale, convertRatingToHundredScale } from '$lib/types';
+  import { enhance } from '$app/forms';
 
   export let show = false;
   export let roastId: number;
   export let roastName: string;
   export let groupId: number | undefined = undefined;
   export let existingRating: Rating | undefined = undefined;
-
-  const dispatch = createEventDispatcher<{
-    close: void;
-    submit: { rating: Omit<Rating, 'id' | 'user_id' | 'created_at'> };
-  }>();
+  export let onClose = () => {};
+  export let onRatingAdded = () => {};
 
   // Form state
   let rating = existingRating?.overall_score ? convertRatingToFiveScale(existingRating.overall_score) : 3;
@@ -23,6 +19,8 @@
   let grind = existingRating?.grind ?? '';
   let tastingNotes = existingRating?.tasting_notes ?? '';
   let preferredMethod = existingRating?.preferred_method ?? false;
+  let error: string | null = null;
+  let isSubmitting = false;
 
   const commonBrewMethods = [
     'V60',
@@ -34,31 +32,34 @@
     'Cold Brew'
   ];
 
-  function handleClose() {
-    dispatch('close');
+  function closeModal() {
+    // Reset form
+    rating = 3;
+    brewMethod = '';
+    ratio = '1:16';
+    temperature = 95;
+    grind = '';
+    tastingNotes = '';
+    preferredMethod = false;
+    error = null;
+    show = false;
+    onClose();
   }
 
   function handleSubmit() {
-    dispatch('submit', {
-      rating: {
-        roast_id: roastId,
-        group_id: groupId,
-        brew_method: brewMethod,
-        preferred_method: preferredMethod,
-        ratio,
-        temperature,
-        grind,
-        tasting_notes: tastingNotes || undefined,
-        overall_score: convertRatingToHundredScale(rating)
-      }
-    });
-    handleClose();
+    error = null;
+    if (!brewMethod) {
+      error = 'Please select or enter a brew method';
+      return;
+    }
   }
 </script>
 
-<Modal {show} on:close={handleClose}>
-  <div class="w-full max-w-2xl">
-    <div class="bg-white rounded-xl shadow-warm overflow-hidden">
+{#if show}
+  <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl" 
+         role="dialog" 
+         aria-modal="true">
       <!-- Header -->
       <div class="px-6 py-4 bg-coffee-deep text-white">
         <h2 class="text-xl font-garamond">
@@ -67,7 +68,37 @@
       </div>
 
       <!-- Form -->
-      <form class="p-6 space-y-6" on:submit|preventDefault={handleSubmit}>
+      <form 
+        method="POST"
+        action="?/submitRating"
+        use:enhance={() => {
+          isSubmitting = true;
+          return async ({ result }) => {
+            isSubmitting = false;
+            if (result.type === 'success') {
+              onRatingAdded();
+              closeModal();
+            } else if (result.type === 'error') {
+              error = result.error?.message || 'Failed to create roast';
+            }
+          };
+        }}
+        onsubmit={handleSubmit}
+        class="p-6 space-y-6"
+      >
+        {#if error}
+          <div class="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {error}
+          </div>
+        {/if}
+
+        <!-- Hidden fields -->
+        <input type="hidden" name="roast_id" value={roastId} />
+        {#if groupId}
+          <input type="hidden" name="group_id" value={groupId} />
+        {/if}
+        <input type="hidden" name="rating" value={convertRatingToHundredScale(rating)} />
+
         <!-- Rating -->
         <div>
           <label class="block font-garamond text-lg text-coffee-deep mb-2">
@@ -80,7 +111,7 @@
                 class="text-2xl focus:outline-none"
                 class:text-coffee-gold={i < rating}
                 class:text-coffee-light={i >= rating}
-                on:click={() => rating = i + 1}
+                onclick={() => rating = i + 1}
               >
                 ★
               </button>
@@ -101,9 +132,9 @@
                 class="px-3 py-1 rounded-full text-sm transition-colors"
                 class:bg-coffee-deep={brewMethod === method}
                 class:text-white={brewMethod === method}
-                class:bg-coffee-cream/30={brewMethod !== method}
+                class:bg-coffee-cream-light={brewMethod !== method}
                 class:text-coffee-deep={brewMethod !== method}
-                on:click={() => brewMethod = method}
+                onclick={() => brewMethod = method}
               >
                 {method}
               </button>
@@ -111,6 +142,7 @@
           </div>
           <input
             type="text"
+            name="brew_method"
             bind:value={brewMethod}
             placeholder="Or enter your own method..."
             class="w-full px-3 py-2 rounded-lg bg-coffee-cream/10 border border-coffee-light/20 
@@ -119,58 +151,56 @@
           <label class="flex items-center mt-2 text-coffee-medium">
             <input
               type="checkbox"
+              name="preferred_method"
               bind:checked={preferredMethod}
-              class="mr-2"
+              class="mr-2 text-coffee-deep focus:ring-coffee-medium/40"
             />
-            This is my preferred method for this roast
+            This is my preferred brewing method for this roast
           </label>
         </div>
 
-        <!-- Ratio -->
-        <div>
-          <label class="block font-garamond text-lg text-coffee-deep mb-2">
-            Water to Coffee Ratio
-          </label>
-          <div class="flex items-center space-x-2">
+        <!-- Brew Parameters -->
+        <div class="grid grid-cols-3 gap-4">
+          <div>
+            <label class="block font-garamond text-lg text-coffee-deep mb-2">
+              Ratio
+            </label>
             <input
               type="text"
+              name="ratio"
               bind:value={ratio}
-              placeholder="e.g., 1:16"
-              class="w-32 px-3 py-2 rounded-lg bg-coffee-cream/10 border border-coffee-light/20 
+              placeholder="e.g. 1:16"
+              class="w-full px-3 py-2 rounded-lg bg-coffee-cream/10 border border-coffee-light/20 
                      focus:outline-none focus:border-coffee-medium/40 text-coffee-deep"
             />
-            <span class="text-coffee-medium">(water:coffee)</span>
           </div>
-        </div>
-
-        <!-- Temperature -->
-        <div>
-          <label class="block font-garamond text-lg text-coffee-deep mb-2">
-            Water Temperature (°C)
-          </label>
-          <input
-            type="number"
-            bind:value={temperature}
-            min="0"
-            max="100"
-            step="0.5"
-            class="w-32 px-3 py-2 rounded-lg bg-coffee-cream/10 border border-coffee-light/20 
-                   focus:outline-none focus:border-coffee-medium/40 text-coffee-deep"
-          />
-        </div>
-
-        <!-- Grind -->
-        <div>
-          <label class="block font-garamond text-lg text-coffee-deep mb-2">
-            Grind Details
-          </label>
-          <input
-            type="text"
-            bind:value={grind}
-            placeholder="e.g., Medium-fine, 15 clicks on Comandante"
-            class="w-full px-3 py-2 rounded-lg bg-coffee-cream/10 border border-coffee-light/20 
-                   focus:outline-none focus:border-coffee-medium/40 text-coffee-deep placeholder:text-coffee-medium/50"
-          />
+          <div>
+            <label class="block font-garamond text-lg text-coffee-deep mb-2">
+              Temperature (°C)
+            </label>
+            <input
+              type="number"
+              name="temperature"
+              bind:value={temperature}
+              min="0"
+              max="100"
+              class="w-full px-3 py-2 rounded-lg bg-coffee-cream/10 border border-coffee-light/20 
+                     focus:outline-none focus:border-coffee-medium/40 text-coffee-deep"
+            />
+          </div>
+          <div>
+            <label class="block font-garamond text-lg text-coffee-deep mb-2">
+              Grind Size
+            </label>
+            <input
+              type="text"
+              name="grind"
+              bind:value={grind}
+              placeholder="e.g. Medium-Fine"
+              class="w-full px-3 py-2 rounded-lg bg-coffee-cream/10 border border-coffee-light/20 
+                     focus:outline-none focus:border-coffee-medium/40 text-coffee-deep"
+            />
+          </div>
         </div>
 
         <!-- Tasting Notes -->
@@ -179,6 +209,7 @@
             Tasting Notes
           </label>
           <textarea
+            name="notes"
             bind:value={tastingNotes}
             rows="3"
             placeholder="Share your thoughts on the flavor profile..."
@@ -192,19 +223,24 @@
           <button
             type="button"
             class="px-4 py-2 text-coffee-medium hover:text-coffee-deep transition-colors"
-            on:click={handleClose}
+            onclick={closeModal}
+            disabled={isSubmitting}
           >
             Cancel
           </button>
           <button
             type="submit"
-            class="px-6 py-2 bg-coffee-deep text-white rounded-lg hover:bg-coffee-deep/90 
-                   transition-colors font-medium"
+            class="px-4 py-2 bg-coffee-deep text-white rounded-lg hover:bg-coffee-medium transition-colors"
+            disabled={isSubmitting}
           >
-            {existingRating ? 'Update Rating' : 'Add Rating'}
+            {#if isSubmitting}
+              Saving...
+            {:else}
+              {existingRating ? 'Update Rating' : 'Add Rating'}
+            {/if}
           </button>
         </div>
       </form>
     </div>
   </div>
-</Modal>
+{/if}

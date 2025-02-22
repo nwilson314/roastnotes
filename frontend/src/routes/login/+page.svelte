@@ -1,11 +1,25 @@
-<script>
+<script lang="ts">
   import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
+  import type { ActionResult } from '@sveltejs/kit';
 
   let loading = false;
+  let error = '';
 
   function handleSubmit() {
     loading = true;
-    // Form submission is handled by the server
+    error = '';
+    
+    return ({ result }: { result: ActionResult }) => {
+      console.log(result)
+      if (result.type === 'failure') {
+        loading = false;
+        error = result.data?.message || 'Invalid email or password';
+      } else if (result.type === 'redirect') {
+        loading = false;
+        goto(result.location);
+      }
+    };
   }
 </script>
 
@@ -28,6 +42,12 @@
       class="bg-white rounded-xl shadow-warm border border-coffee-light/20 p-8"
     >
       <div class="space-y-6">
+        {#if error}
+          <div class="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {error}
+          </div>
+        {/if}
+        
         <!-- Email -->
         <div>
           <label for="email" class="block font-garamond text-lg text-coffee-deep mb-2">

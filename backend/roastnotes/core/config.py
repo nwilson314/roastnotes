@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     # Security
     JWT_SECRET: str = "super_secret_change_me"
     JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRE_MINUTES: int = 30
+    JWT_EXPIRE_MINUTES: int = 1
 
     @property
     def DATABASE_URL(self) -> str:
